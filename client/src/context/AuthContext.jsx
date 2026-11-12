@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useContext,
@@ -17,10 +16,13 @@ export function AuthProvider({ children }) {
   const refresh = useCallback(async () => {
     try {
       const { data } = await api.get("/auth/me");
-      setUser(data.user ?? data);
-    } catch {
+      setUser(data?.user ?? data ?? null);
+    } catch (error) {
+      // A 401 on first page load is expected when no session exists.
+      if (error?.response?.status !== 401) {
+        console.error("Unable to restore CivicConnect session:", error);
+      }
       setUser(null);
-      localStorage.removeItem("civicconnect_token");
     } finally {
       setLoading(false);
     }
@@ -36,24 +38,23 @@ export function AuthProvider({ children }) {
       password,
     });
 
-    if (!data.token) {
-      throw new Error("Login response did not contain an authentication token.");
+    const authenticatedUser = data?.user ?? (
+      data?.id ? { id: data.id, fullName: data.fullName, role: data.role } : null
+    );
+
+    if (!authenticatedUser?.role) {
+      throw new Error("The server did not return a valid user profile.");
     }
 
-    localStorage.setItem("civicconnect_token", data.token);
-    setUser(data.user);
-
-    return data;
+    // Authentication is maintained by the HttpOnly cookie. Do not store the
+    // session token in localStorage.
+    localStorage.removeItem("civicconnect_token");
+    setUser(authenticatedUser);
+    return { ...data, user: authenticatedUser };
   }
 
   async function register(payload) {
     const { data } = await api.post("/auth/register", payload);
-
-    if (data.token) {
-      localStorage.setItem("civicconnect_token", data.token);
-      setUser(data.user);
-    }
-
     return data;
   }
 
