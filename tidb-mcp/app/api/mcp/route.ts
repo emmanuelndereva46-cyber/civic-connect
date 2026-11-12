@@ -77,7 +77,7 @@ const handler = createMcpHandler((server) => {
       return { isError: true, content: [{ type: 'text', text: 'Rejected: only one SELECT statement without comments or write/administrative keywords is permitted.' }] };
     }
     try {
-      const [rows] = await getPool().query(\`SELECT * FROM (\${normalized}) AS _cc_readonly_result LIMIT ?\`, [max_rows]);
+      const [rows] = await getPool().query('SELECT * FROM (' + normalized + ') AS _cc_readonly_result LIMIT ?', [max_rows]);
       return { content: [{ type: 'text', text: JSON.stringify({ row_count: (rows as unknown[]).length, rows }) }] };
     } catch (error) { return { isError: true, content: [{ type: 'text', text: safeError(error) }] }; }
   });
