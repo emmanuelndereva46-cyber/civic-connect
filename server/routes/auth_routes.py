@@ -91,10 +91,14 @@ def login():
         ):
             return jsonify({"error": "Invalid email or password."}), 401
 
-        # Keep the audit record in the same transaction as the successful
-        # authentication, so a failed write cannot leave a half-created login.
-        log_action(request, user.id, "LOGIN", "User", user.id)
-        db.session.commit()
+        # Audit logging is best-effort: an audit_logs schema problem must not
+        # prevent a valid user from signing in. Roll back only the audit write.
+        try:
+            log_action(request, user.id, "LOGIN", "User", user.id)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Could not write login audit record")
 
         token = issue_token(user.id)
         public_user = user.public_dict()
