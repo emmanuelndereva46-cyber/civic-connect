@@ -15,7 +15,12 @@ def _require(name: str) -> str:
 
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = _require("DATABASE_URL")
+    DATABASE_URL = _require("DATABASE_URL")
+    # TiDB uses the MySQL protocol. Force SQLAlchemy to use the
+    # PyMySQL driver installed in requirements.txt, not MySQLdb.
+    if DATABASE_URL.startswith("mysql://"):
+        DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET = _require("JWT_SECRET")
     CLIENT_ORIGIN = os.environ.get("CLIENT_ORIGIN", "http://localhost:5173")
