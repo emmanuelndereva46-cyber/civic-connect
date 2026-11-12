@@ -1,5 +1,12 @@
 import os
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import (
+    parse_qsl,
+    quote,
+    unquote,
+    urlencode,
+    urlsplit,
+    urlunsplit,
+)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,20 +22,46 @@ def _require(name: str) -> str:
     return value
 
 
-class Config:
-    DATABASE_URL = _require("DATABASE_URL")
-    # TiDB uses the MySQL protocol. Use the installed PyMySQL driver.
-    if DATABASE_URL.startswith("mysql://"):
-        DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+def _normalise_database_url(value: str) -> str:
+    # Vercel environment variables should not need quotes, but tolerate
+    # accidental wrapping quotes or whitespace when they are pasted in.
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        value = value[1:-1].strip()
 
-    # TiDB connection examples may include sslaccept, which is not a
-    # PyMySQL connection option. Replace it with PyMySQL's TLS verification
-    # options while preserving the rest of the connection URL.
-    parsed_url = urlsplit(DATABASE_URL)
+    if value.startswith("mysql://"):
+        value = value.replace("mysql://", "mysql+pymysql://", 1)
+
+    # Percent-encode username/password so reserved characters in a newly
+    # generated TiDB password cannot make SQLAlchemy reject the URL.
+    scheme, separator, remainder = value.partition("://")
+    if not separator:
+        raise RuntimeError(
+            "DATABASE_URL must be a valid MySQL URL beginning with "
+            "mysql:// or mysql+pymysql://."
+        )
+
+    credentials, at, host_and_path = remainder.rpartition("@")
+    if not at or ":" not in credentials:
+        raise RuntimeError(
+            "DATABASE_URL must include a username and password before the host."
+        )
+
+    username, password = credentials.split(":", 1)
+    encoded_credentials = (
+        quote(unquote(username), safe="")
+        + ":"
+        + quote(unquote(password), safe="")
+    )
+    value = f"{scheme}://{encoded_credentials}@{host_and_path}"
+
+    # sslaccept is not a PyMySQL option. Replace it with certificate and
+    # hostname verification, retaining any other query parameters.
+    parsed_url = urlsplit(value)
     query_items = parse_qsl(parsed_url.query, keep_blank_values=True)
     if any(key.lower() == "sslaccept" for key, _ in query_items):
         query_items = [
-            (key, value) for key, value in query_items
+            (key, item) for key, item in query_items
             if key.lower() != "sslaccept"
         ]
         existing_keys = {key.lower() for key, _ in query_items}
@@ -36,7 +69,7 @@ class Config:
             query_items.append(("ssl_verify_cert", "true"))
         if "ssl_verify_identity" not in existing_keys:
             query_items.append(("ssl_verify_identity", "true"))
-        DATABASE_URL = urlunsplit((
+        value = urlunsplit((
             parsed_url.scheme,
             parsed_url.netloc,
             parsed_url.path,
@@ -44,6 +77,11 @@ class Config:
             parsed_url.fragment,
         ))
 
+    return value
+
+
+class Config:
+    DATABASE_URL = _normalise_database_url(_require("DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET = _require("JWT_SECRET")
