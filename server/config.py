@@ -55,27 +55,27 @@ def _normalise_database_url(value: str) -> str:
     )
     value = f"{scheme}://{encoded_credentials}@{host_and_path}"
 
-    # sslaccept is not a PyMySQL option. Replace it with certificate and
-    # hostname verification, retaining any other query parameters.
+    # TiDB Cloud Serverless public endpoints require TLS. PyMySQL accepts
+    # these SQLAlchemy URL options and verifies both the certificate chain
+    # and the server hostname. Force them on even if DATABASE_URL omitted
+    # them or supplied weaker values.
     parsed_url = urlsplit(value)
     query_items = parse_qsl(parsed_url.query, keep_blank_values=True)
-    if any(key.lower() == "sslaccept" for key, _ in query_items):
-        query_items = [
-            (key, item) for key, item in query_items
-            if key.lower() != "sslaccept"
-        ]
-        existing_keys = {key.lower() for key, _ in query_items}
-        if "ssl_verify_cert" not in existing_keys:
-            query_items.append(("ssl_verify_cert", "true"))
-        if "ssl_verify_identity" not in existing_keys:
-            query_items.append(("ssl_verify_identity", "true"))
-        value = urlunsplit((
-            parsed_url.scheme,
-            parsed_url.netloc,
-            parsed_url.path,
-            urlencode(query_items),
-            parsed_url.fragment,
-        ))
+    query_items = [
+        (key, item) for key, item in query_items
+        if key.lower() not in ("sslaccept", "ssl_verify_cert", "ssl_verify_identity")
+    ]
+    query_items.extend([
+        ("ssl_verify_cert", "true"),
+        ("ssl_verify_identity", "true"),
+    ])
+    value = urlunsplit((
+        parsed_url.scheme,
+        parsed_url.netloc,
+        parsed_url.path,
+        urlencode(query_items),
+        parsed_url.fragment,
+    ))
 
     return value
 
