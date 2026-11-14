@@ -127,7 +127,7 @@ def update_pg_status(pg_id):
     if status == PgStatus.CLOSED.value:
         submission.closed_at = datetime.utcnow()
     comment = str(body.get("comment") or f"Status changed to {status.replace('_', ' ').lower()}.").strip()
-    db.session.add(PigeonholeUpdate(submission_id=submission.id, user_id=g.user.id,
+    db.session.add(PigeonholeUpdate(pigeonhole_id=submission.id, user_id=g.user.id,
                                     status=PgStatus(status), comment=comment))
     if submission.user_id:
         notify(submission.user_id, "Submission status changed",
