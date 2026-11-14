@@ -169,7 +169,7 @@ class Report(db.Model):
             "resolvedAt": self.resolved_at.isoformat() if self.resolved_at else None,
             "closedAt": None,
             "attachments": [item.public_dict() for item in self.attachments],
-            "updates": [item.public_dict() for item in self.updates],
+            "updates": [item.public_dict() for item in self.updates if include_citizen or item.is_public],
         }
         if include_citizen:
             result["citizenName"] = self.citizen.full_name if self.citizen else None
