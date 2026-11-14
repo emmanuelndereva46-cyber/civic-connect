@@ -57,7 +57,6 @@ def create_report():
                     latitude=body.get("latitude"), longitude=body.get("longitude"))
     db.session.add(report)
     db.session.flush()
-    report.reference_number = make_reference("CC", report.id)
     notify(g.user.id, "Report submitted",
            f"Your report {report.reference_number} was received.", report_id=report.id)
     log_action(request, g.user.id, "REPORT_SUBMITTED", "Report", report.id, report.reference_number)
