@@ -5,7 +5,7 @@ from datetime import datetime
 from extensions import db
 from models import AuditLog, Notification
 
-EMAIL_RE = re.compile(r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+EMAIL_RE = re.compile(r"^[^@ ]+@[^@ ]+[.][^@ ]+$")
 STRONG_PASSWORD_RE = re.compile(r"^(?=.*[A-Z])(?=.*[0-9]).{8,}$")
 
 
