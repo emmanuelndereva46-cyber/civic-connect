@@ -19,7 +19,7 @@ def is_strong_password(value: str) -> bool:
 
 def make_reference(prefix: str, record_id=None) -> str:
     # Required unique reference is generated before the first database INSERT.
-    suffix = f"{record_id:06d}" if record_id is not None else secrets.token_hex(4).upper()
+    suffix = f"{record_id:06d}" if record_id is not None else secrets.token_hex(8).upper()
     return f"{prefix}-{datetime.utcnow().year}-{suffix}"
 
 
