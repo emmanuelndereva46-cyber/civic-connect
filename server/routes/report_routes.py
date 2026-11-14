@@ -51,7 +51,7 @@ def create_report():
     category = Category.query.filter_by(id=category_id, is_active=True).first()
     if not category:
         return jsonify({"error": "Unknown or inactive category"}), 400
-    report = Report(citizen_id=g.user.id, category_id=category.id,
+    report = Report(reference_number=make_reference("CC"), citizen_id=g.user.id, category_id=category.id,
                     department_id=category.department_id, title=title,
                     description=description, location=location,
                     latitude=body.get("latitude"), longitude=body.get("longitude"))
