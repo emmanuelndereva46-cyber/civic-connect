@@ -45,10 +45,10 @@ useEffect(() => {
 
   async function loadCategories() {
     try {
-      const { data } = await api.get("/reports/categories");
+      const { data } = await api.get("/categories");
 
       if (!cancelled) {
-        setCategories(data.categories ?? []);
+        setCategories(Array.isArray(data) ? data : (data.categories ?? []));
       }
     } catch (err) {
       if (!cancelled) {
@@ -150,7 +150,7 @@ async function handleSubmit() {
       longitude: form.longitude ?? undefined,
     });
 
-    setResult(data.report);
+    setResult(data);
     setStep(5);
   } catch (err) {
     setError(
@@ -210,7 +210,7 @@ async function handleSubmit() {
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 {selectedCategory && (
-                  <p className="mt-1 text-xs text-civic-ink/50">Routes to {selectedCategory.department?.name ?? "Unassigned department"}</p>
+                  <p className="mt-1 text-xs text-civic-ink/50">Routes to {selectedCategory.departmentName ?? "Unassigned department"}</p>
                 )}
               </div>
               <div>
@@ -304,7 +304,7 @@ async function handleSubmit() {
               <dl className="space-y-3">
                 <div><dt className="text-civic-ink/50">Title</dt><dd className="font-medium">{form.title}</dd></div>
                 <div><dt className="text-civic-ink/50">Description</dt><dd>{form.description}</dd></div>
-                <div><dt className="text-civic-ink/50">Category</dt><dd>{selectedCategory?.name} → {selectedCategory?.department?.name ?? "Unassigned department"}</dd></div>
+                <div><dt className="text-civic-ink/50">Category</dt><dd>{selectedCategory?.name} → {selectedCategory?.departmentName ?? "Unassigned department"}</dd></div>
                 <div><dt className="text-civic-ink/50">Priority</dt><dd className="capitalize">{form.priority.toLowerCase()}</dd></div>
                 <div><dt className="text-civic-ink/50">Location</dt><dd>{[form.location, form.ward, form.subCounty, form.county].filter(Boolean).join(", ") || "Not provided"}</dd></div>
                 <div><dt className="text-civic-ink/50">Photos attached</dt><dd>{images.length}</dd></div>
@@ -319,7 +319,7 @@ async function handleSubmit() {
             <h2 className="mt-4 text-xl font-semibold text-civic-navy">Your report has been submitted successfully.</h2>
             <dl className="mx-auto mt-6 max-w-xs space-y-2 text-left text-sm">
               <div className="flex justify-between"><dt className="text-civic-ink/50">Reference</dt><dd className="font-semibold">{result.referenceNumber}</dd></div>
-              <div className="flex justify-between"><dt className="text-civic-ink/50">Department</dt><dd>{result.department?.name ?? "Not assigned"}</dd></div>
+              <div className="flex justify-between"><dt className="text-civic-ink/50">Department</dt><dd>{result.department ?? "Not assigned"}</dd></div>
               <div className="flex justify-between"><dt className="text-civic-ink/50">Status</dt><dd className="capitalize">{result.status.toLowerCase()}</dd></div>
             </dl>
             <div className="mt-8 flex justify-center gap-3">
