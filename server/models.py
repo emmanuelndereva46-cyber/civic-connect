@@ -70,7 +70,7 @@ class User(db.Model):
     def public_dict(self):
         return {
             "id": self.id, "fullName": self.full_name, "email": self.email,
-            "phone": self.phone, "role": self.role.value, "county": None,
+            "phone": self.phone, "role": {"GOVERNMENT_OFFICER": "OFFICER", "SYSTEM_ADMINISTRATOR": "ADMIN"}.get(self.role.value, self.role.value), "county": None,
             "location": None, "profileImage": None, "status": self.status.value,
             "departmentId": self.department_id,
         }
@@ -241,14 +241,6 @@ class PigeonholeSubmission(db.Model):
     @property
     def submitted_at(self):
         return self.created_at
-
-    @property
-    def anonymous_submission(self):
-        return bool(self.is_anonymous)
-
-    @anonymous_submission.setter
-    def anonymous_submission(self, value):
-        self.is_anonymous = bool(value)
 
     def public_dict(self, reveal_identity=False, citizen_view=False):
         visible_updates = self.updates if not citizen_view else [
