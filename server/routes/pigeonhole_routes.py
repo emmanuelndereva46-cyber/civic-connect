@@ -150,7 +150,7 @@ def respond_pigeonhole(pg_id):
     submission.response = response_text
     submission.status = PgStatus.RESPONSE_PROVIDED
     db.session.add(PigeonholeUpdate(
-        submission_id=submission.id, user_id=g.user.id,
+        pigeonhole_id=submission.id, user_id=g.user.id,
         status=PgStatus.RESPONSE_PROVIDED, comment=response_text))
     if submission.user_id:
         notify(submission.user_id, "Response provided",
