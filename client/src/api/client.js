@@ -1,10 +1,13 @@
+﻿import axios from "axios";
 
-import axios from "axios";
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: (configuredApiUrl || "/api").replace(/\/+$/, ""),
   withCredentials: true,
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 api.interceptors.request.use((config) => {
@@ -16,5 +19,23 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const serverMessage = error.response?.data?.message;
+    const serverError = error.response?.data?.error;
+
+    if (typeof serverMessage === "string") {
+      error.userMessage = serverMessage;
+    } else if (typeof serverError === "string") {
+      error.userMessage = serverError;
+    } else if (typeof error.message === "string") {
+      error.userMessage = error.message;
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default api;

@@ -302,6 +302,9 @@ export async function submitReport(
       });
 
       return createdReport;
+    }, {
+      maxWait: 10000,
+      timeout: 30000
     });
 
     res.status(201).json({

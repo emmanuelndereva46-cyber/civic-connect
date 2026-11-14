@@ -2,7 +2,14 @@ __pycache__/
 *.pyc
 venv/
 .env
+.env.*
+!.env.example
 instance/
-migrations/
+/migrations/
 
 /generated/prisma
+
+node_modules/
+dist/
+client/node_modules/
+client/dist/

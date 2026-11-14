@@ -91,6 +91,7 @@ model Department {
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  pigeonholeSubmissions PigeonholeSubmission[]
 
   users      User[]
   categories Category[]
@@ -245,8 +246,11 @@ model PigeonholeSubmission {
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   closedAt        DateTime?        @map("closed_at")
+  departmentId   Int?   @map("department_id")
+accessCodeHash String? @map("access_code_hash") @db.VarChar(64)
 
-  submitter   User?                  @relation("PigeonholeSubmitter", fields: [submitterId], references: [id], onDelete: SetNull)
+  submitter   User?       @relation("PigeonholeSubmitter", fields: [submitterId], references: [id], onDelete: SetNull)
+department  Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   category    PigeonholeCategory     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   attachments PigeonholeAttachment[]
   updates     PigeonholeUpdate[]
@@ -255,6 +259,7 @@ model PigeonholeSubmission {
   @@index([categoryId, status])
   @@index([submitterId, createdAt])
   @@map("pigeonhole_submissions")
+  @@index([departmentId])
 }
 
 model PigeonholeAttachment {

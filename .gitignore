@@ -1,0 +1,29 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+**/node_modules/
+
+# Build output
+**/dist/
+
+# Generated Prisma client
+**/generated/prisma/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Local files
+*.log
+.DS_Store
+
+# Temporary local backups
+/civicconnect-frontend.zip
+/client/repair-backup/
+
+# Accidental temporary file
+/lint.config.js

@@ -5,6 +5,10 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import reportRoutes from "./routes/report.routes.js";
+import departmentRoutes from "./routes/department.routes.js";
+import pigeonholeRoutes from "./routes/pigeonhole.routes.js";
+import trackRoutes from "./routes/track.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 import { prisma } from "./config/prisma.js";
 import authRoutes from "./routes/auth.routes.js";
@@ -42,6 +46,10 @@ app.use(
 // Authentication routes: registration and login
 app.use("/api/auth", authRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/departments", departmentRoutes);
+app.use("/api/pigeonhole", pigeonholeRoutes);
+app.use("/api/track", trackRoutes);
+app.use("/api/notifications", notificationRoutes);
 // Root route
 app.get("/", (_req, res) => {
   res.status(200).json({
