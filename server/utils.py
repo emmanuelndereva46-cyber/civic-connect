@@ -1,4 +1,5 @@
 import re
+import secrets
 from datetime import datetime
 
 from extensions import db
@@ -16,8 +17,10 @@ def is_strong_password(value: str) -> bool:
     return bool(value) and bool(STRONG_PASSWORD_RE.match(value))
 
 
-def make_reference(prefix: str, record_id: int) -> str:
-    return f"{prefix}-{datetime.utcnow().year}-{record_id:06d}"
+def make_reference(prefix: str, record_id=None) -> str:
+    # Required unique reference is generated before the first database INSERT.
+    suffix = f"{record_id:06d}" if record_id is not None else secrets.token_hex(4).upper()
+    return f"{prefix}-{datetime.utcnow().year}-{suffix}"
 
 
 def client_ip(req) -> str | None:
