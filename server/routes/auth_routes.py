@@ -12,20 +12,10 @@ bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
 def _set_cookie(resp, token):
-    # Vercel terminates TLS before forwarding requests to the Flask function.
-    # Honour the forwarded protocol so browsers accept the session cookie in
-    # production, while retaining HTTP support for local development.
     forwarded_proto = request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip()
     secure = request.is_secure or forwarded_proto == "https" or current_app.config.get("ENV") == "production"
-    resp.set_cookie(
-        COOKIE_NAME,
-        token,
-        httponly=True,
-        secure=secure,
-        samesite="Lax",
-        max_age=8 * 3600,
-        path="/",
-    )
+    resp.set_cookie(COOKIE_NAME, token, httponly=True, secure=secure,
+                    samesite="Lax", max_age=8 * 3600, path="/")
     return resp
 
 
@@ -36,31 +26,23 @@ def register():
     full_name = str(body.get("fullName", "")).strip()
     email = str(body.get("email", "")).strip().lower()
     phone = str(body.get("phone", "")).strip() or None
-    county = str(body.get("county", "")).strip() or None
     password = body.get("password", "")
-
     errors = {}
-    if not (2 <= len(full_name) <= 100):
-        errors["fullName"] = "Full name must be 2-100 characters."
+    if not (2 <= len(full_name) <= 150):
+        errors["fullName"] = "Full name must be 2-150 characters."
     if not is_valid_email(email):
         errors["email"] = "Enter a valid email address."
+    if phone and len(phone) > 30:
+        errors["phone"] = "Phone must be 30 characters or fewer."
     if not is_strong_password(password):
         errors["password"] = "Password needs 8+ characters, one uppercase letter and one number."
     if errors:
         return jsonify({"error": "Invalid input", "details": errors}), 400
-
     try:
         if User.query.filter_by(email=email).first():
             return jsonify({"error": "Email already registered"}), 409
-
-        user = User(
-            full_name=full_name,
-            email=email,
-            phone=phone,
-            county=county,
-            password_hash=generate_password_hash(password),
-            role=Role.CITIZEN,
-        )
+        user = User(full_name=full_name, email=email, phone=phone,
+                    password_hash=generate_password_hash(password), role=Role.CITIZEN)
         db.session.add(user)
         db.session.flush()
         log_action(request, user.id, "USER_REGISTERED", "User", user.id)
@@ -78,37 +60,22 @@ def login():
     body = request.get_json(silent=True) or {}
     email = str(body.get("email", "")).strip().lower()
     password = body.get("password", "")
-
     if not email or not isinstance(password, str) or not password:
         return jsonify({"error": "Email and password are required."}), 400
-
     try:
         user = User.query.filter_by(email=email).first()
-        if (
-            not user
-            or user.status != AccountStatus.ACTIVE
-            or not check_password_hash(user.password_hash, password)
-        ):
+        if not user or user.status != AccountStatus.ACTIVE or not check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid email or password."}), 401
-
-        # Audit logging is best-effort: an audit_logs schema problem must not
-        # prevent a valid user from signing in. Roll back only the audit write.
         try:
             log_action(request, user.id, "LOGIN", "User", user.id)
             db.session.commit()
         except Exception:
             db.session.rollback()
             current_app.logger.exception("Could not write login audit record")
-
         token = issue_token(user.id)
         public_user = user.public_dict()
-        response = jsonify({
-            "user": public_user,
-            # Retain top-level fields for older clients that used this shape.
-            "id": user.id,
-            "fullName": user.full_name,
-            "role": user.role.value,
-        })
+        response = jsonify({"user": public_user, "id": user.id,
+                            "fullName": user.full_name, "role": public_user["role"]})
         return _set_cookie(response, token)
     except Exception:
         db.session.rollback()
@@ -119,8 +86,12 @@ def login():
 @bp.post("/logout")
 @require_roles()
 def logout():
-    log_action(request, g.user.id, "LOGOUT", "User", g.user.id)
-    db.session.commit()
+    try:
+        log_action(request, g.user.id, "LOGOUT", "User", g.user.id)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Could not write logout audit record")
     resp = jsonify({"ok": True})
     resp.delete_cookie(COOKIE_NAME, path="/", httponly=True, samesite="Lax")
     return resp
@@ -135,23 +106,22 @@ def me():
 @bp.post("/forgot-password")
 @limiter.limit("10 per 15 minutes")
 def forgot_password():
-    # No email provider is configured in this demo project, so no reset email
-    # is actually sent. The response is identical whether or not the account
-    # exists, to avoid confirming which emails are registered.
-    return jsonify({
-        "message": "If that account exists, password reset instructions will be "
-                   "sent once an email provider is configured."
-    })
+    return jsonify({"message": "If that account exists, password reset instructions will be sent once an email provider is configured."})
 
 
 @bp.put("/me")
 @require_roles()
 def update_profile():
     body = request.get_json(silent=True) or {}
-    for field, attr in (("fullName", "full_name"), ("phone", "phone"),
-                        ("county", "county"), ("location", "location")):
-        if field in body:
-            value = str(body[field]).strip()
-            setattr(g.user, attr, value or None)
+    if "fullName" in body:
+        name = str(body["fullName"]).strip()
+        if not (2 <= len(name) <= 150):
+            return jsonify({"error": "Full name must be 2-150 characters."}), 400
+        g.user.full_name = name
+    if "phone" in body:
+        phone = str(body["phone"]).strip() or None
+        if phone and len(phone) > 30:
+            return jsonify({"error": "Phone must be 30 characters or fewer."}), 400
+        g.user.phone = phone
     db.session.commit()
     return jsonify(g.user.public_dict())
