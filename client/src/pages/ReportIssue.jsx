@@ -34,7 +34,7 @@ export default function ReportIssue() {
   const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({
-    title: "", description: "", categoryId: "", dateObserved: "", priority: "MEDIUM",
+    title: "", description: "", categoryId: "",
     county: "", subCounty: "", ward: "", location: "", latitude: null, longitude: null,
   });
   const [images, setImages] = useState([]); // { file, previewUrl }
@@ -213,21 +213,6 @@ async function handleSubmit() {
                   <p className="mt-1 text-xs text-civic-ink/50">Routes to {selectedCategory.departmentName ?? "Unassigned department"}</p>
                 )}
               </div>
-              <div>
-                <label className="text-sm font-medium">Priority</label>
-                <select value={form.priority} onChange={update("priority")}
-                  className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue">
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Date observed <span className="text-civic-ink/40">(optional)</span></label>
-              <input type="date" value={form.dateObserved} onChange={update("dateObserved")}
-                className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
             </div>
           </div>
         )}
@@ -305,7 +290,6 @@ async function handleSubmit() {
                 <div><dt className="text-civic-ink/50">Title</dt><dd className="font-medium">{form.title}</dd></div>
                 <div><dt className="text-civic-ink/50">Description</dt><dd>{form.description}</dd></div>
                 <div><dt className="text-civic-ink/50">Category</dt><dd>{selectedCategory?.name} → {selectedCategory?.departmentName ?? "Unassigned department"}</dd></div>
-                <div><dt className="text-civic-ink/50">Priority</dt><dd className="capitalize">{form.priority.toLowerCase()}</dd></div>
                 <div><dt className="text-civic-ink/50">Location</dt><dd>{[form.location, form.ward, form.subCounty, form.county].filter(Boolean).join(", ") || "Not provided"}</dd></div>
                 <div><dt className="text-civic-ink/50">Photos attached</dt><dd>{images.length}</dd></div>
               </dl>
