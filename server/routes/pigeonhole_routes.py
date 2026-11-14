@@ -1,74 +1,45 @@
-import hashlib
-import hmac
-import secrets
 from datetime import datetime
 
-import jwt
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
 from auth import require_roles
 from extensions import db
-from models import (AccountStatus, PgStatus, PgType, PigeonholeSubmission,
-                     PigeonholeUpdate, Role, User)
+from models import PgStatus, PgType, PigeonholeCategory, PigeonholeSubmission, PigeonholeUpdate, Role, User
 from utils import log_action, make_reference, notify
 
 bp = Blueprint("pigeonhole", __name__, url_prefix="/api")
-
-VALID_TYPES = {t.value for t in PgType}
-VALID_STATUSES = {s.value for s in PgStatus}
-
-
-def _hash_code(code: str) -> str:
-    return hashlib.sha256(code.encode()).hexdigest()
+VALID_TYPES = {item.value for item in PgType}
+VALID_STATUSES = {item.value for item in PgStatus}
 
 
-def _current_user_id_optional():
-    token = request.cookies.get("token")
-    if not token:
-        return None
-    try:
-        data = jwt.decode(token, current_app.config["JWT_SECRET"], algorithms=["HS256"])
-    except jwt.PyJWTError:
-        return None
-    user = User.query.get(data.get("id"))
-    return user.id if user and user.status == AccountStatus.ACTIVE else None
+def _current_user():
+    from auth import _load_user_from_cookie
+    return _load_user_from_cookie()
 
 
-def _scope_filter(user):
-    """Returns None when no extra filter is needed (admin sees everything)."""
-    if user.role == Role.ADMIN:
-        return None
-    if user.role == Role.OFFICER:
-        return PigeonholeSubmission.department_id == (user.department_id or -1)
-    return PigeonholeSubmission.user_id == user.id
-
-
-def _scoped_query(user):
+def _scope_query(user):
     query = PigeonholeSubmission.query
-    scope = _scope_filter(user)
-    return query.filter(scope) if scope is not None else query
-
-
-def _scoped_get(user, pg_id):
-    return _scoped_query(user).filter(PigeonholeSubmission.id == pg_id).first()
+    # The live schema has no department or assigned-officer columns for
+    # pigeonhole submissions. Admins and authorized officers share this queue;
+    # citizens can only see their own non-anonymous submissions.
+    if user.role == Role.CITIZEN:
+        query = query.filter(PigeonholeSubmission.user_id == user.id)
+    return query
 
 
 @bp.post("/pigeonhole")
 def submit_pigeonhole():
-    """Public endpoint. Anonymous submissions never store a user_id."""
     body = request.get_json(silent=True) or {}
     submission_type = body.get("submissionType")
     subject = str(body.get("subject", "")).strip()
     message = str(body.get("message", "")).strip()
-    department_id = body.get("departmentId")  # None / "not sure" -> general review queue
     anonymous = bool(body.get("anonymous"))
     consent = bool(body.get("consent"))
-
     errors = {}
     if submission_type not in VALID_TYPES:
         errors["submissionType"] = "Select a valid submission type."
-    if not (3 <= len(subject) <= 150):
-        errors["subject"] = "Subject must be 3-150 characters."
+    if not (3 <= len(subject) <= 200):
+        errors["subject"] = "Subject must be 3-200 characters."
     if not (10 <= len(message) <= 5000):
         errors["message"] = "Message must be 10-5000 characters."
     if not consent:
@@ -76,74 +47,70 @@ def submit_pigeonhole():
     if errors:
         return jsonify({"error": "Invalid input", "details": errors}), 400
 
-    user_id = None
-    if not anonymous:
-        user_id = _current_user_id_optional()
-        if not user_id:
-            return jsonify({"error": "Log in to include your contact details, or submit anonymously"}), 401
+    user = _current_user()
+    if not anonymous and not user:
+        return jsonify({"error": "Log in to submit with your account, or choose anonymous submission."}), 401
 
-    access_code = secrets.token_hex(6) if anonymous else None
+    # category_id is mandatory in TiDB. Ensure the category matching the
+    # submission type exists, creating that enum-backed category if necessary.
+    category = PigeonholeCategory.query.filter_by(name=PgType(submission_type)).first()
+    if not category:
+        category = PigeonholeCategory(name=PgType(submission_type),
+                                      description=f"Default category for {submission_type.lower()}.")
+        db.session.add(category)
+        db.session.flush()
+
     submission = PigeonholeSubmission(
-        user_id=user_id, submission_type=submission_type, subject=subject, message=message,
-        department_id=department_id, anonymous_submission=anonymous,
-        access_code_hash=_hash_code(access_code) if access_code else None,
+        reference_number=make_reference("PG"),
+        submission_type=PgType(submission_type),
+        subject=subject,
+        message=message,
+        anonymous_submission=anonymous,
+        user_id=None if anonymous else user.id,
+        category_id=category.id,
     )
     db.session.add(submission)
     db.session.flush()
-    submission.reference_number = make_reference("PG", submission.id)
-
-    notify(user_id, "Feedback received", f"Your submission {submission.reference_number} was received.",
-           "PG_RECEIVED", pigeonhole_id=submission.id)
-    # The IP address below is retained for audit purposes even for anonymous
-    # submissions; document this in the privacy policy rather than claiming
-    # complete anonymity.
-    log_action(request, user_id, "PIGEONHOLE_SUBMITTED", "Pigeonhole", submission.id)
+    if submission.user_id:
+        notify(submission.user_id, "Feedback received",
+               f"Your submission {submission.reference_number} was received.")
+    log_action(request, user.id if user else None, "PIGEONHOLE_SUBMITTED",
+               "Pigeonhole", submission.id, submission.reference_number)
     db.session.commit()
-
-    resp = {"referenceNumber": submission.reference_number}
-    if access_code:
-        resp["accessCode"] = access_code  # shown once; store this to check status later
-    return jsonify(resp), 201
+    return jsonify({"referenceNumber": submission.reference_number}), 201
 
 
 @bp.get("/track/pigeonhole")
 def track_pigeonhole():
-    ref = request.args.get("ref", "")
-    code = request.args.get("code", "")
+    # The deployed schema has no access-code hash column. The reference is
+    # therefore used as a tracking key; this endpoint exposes only status and
+    # the public response, never the submitter's identity or private notes.
+    ref = request.args.get("ref", "").strip()
     submission = PigeonholeSubmission.query.filter_by(reference_number=ref).first()
-    valid = (submission and submission.access_code_hash
-             and hmac.compare_digest(submission.access_code_hash, _hash_code(code)))
-    if not valid:
+    if not submission:
         return jsonify({"error": "Not found"}), 404
-    return jsonify({
-        "referenceNumber": submission.reference_number,
-        "status": submission.status.value,
-        "response": submission.response,
-        "respondedAt": submission.responded_at.isoformat() if submission.responded_at else None,
-    })
+    return jsonify({"referenceNumber": submission.reference_number,
+                    "status": submission.status.value,
+                    "response": submission.response,
+                    "respondedAt": None})
 
 
 @bp.get("/pigeonhole")
 @require_roles()
 def list_pigeonhole():
-    rows = _scoped_query(g.user) \
-        .order_by(PigeonholeSubmission.submitted_at.desc()).limit(100).all()
-    # Officers never receive author identity, even for non-anonymous submissions,
-    # unless the deployment's privacy policy is changed to explicitly allow it.
-    reveal = g.user.role == Role.ADMIN
-    citizen_view = g.user.role == Role.CITIZEN
-    return jsonify([r.public_dict(reveal_identity=reveal, citizen_view=citizen_view) for r in rows])
+    rows = _scope_query(g.user).order_by(PigeonholeSubmission.created_at.desc()).limit(100).all()
+    return jsonify([row.public_dict(reveal_identity=g.user.role == Role.ADMIN,
+                                    citizen_view=g.user.role == Role.CITIZEN) for row in rows])
 
 
 @bp.get("/pigeonhole/<int:pg_id>")
 @require_roles()
 def get_pigeonhole(pg_id):
-    submission = _scoped_get(g.user, pg_id)
+    submission = _scope_query(g.user).filter_by(id=pg_id).first()
     if not submission:
         return jsonify({"error": "Not found"}), 404
-    reveal = g.user.role == Role.ADMIN
-    citizen_view = g.user.role == Role.CITIZEN
-    return jsonify(submission.public_dict(reveal_identity=reveal, citizen_view=citizen_view))
+    return jsonify(submission.public_dict(reveal_identity=g.user.role == Role.ADMIN,
+                                          citizen_view=g.user.role == Role.CITIZEN))
 
 
 @bp.put("/pigeonhole/<int:pg_id>/status")
@@ -153,22 +120,18 @@ def update_pg_status(pg_id):
     status = body.get("status")
     if status not in VALID_STATUSES:
         return jsonify({"error": "Invalid status"}), 400
-
-    submission = _scoped_get(g.user, pg_id)
+    submission = PigeonholeSubmission.query.get(pg_id)
     if not submission:
         return jsonify({"error": "Not found"}), 404
-
-    submission.status = status
+    submission.status = PgStatus(status)
     if status == PgStatus.CLOSED.value:
         submission.closed_at = datetime.utcnow()
-
-    db.session.add(PigeonholeUpdate(
-        pigeonhole_id=submission.id, user_id=g.user.id, status=status,
-        comment=body.get("comment") or None,  # internal note, never shown to the citizen
-    ))
-    notify(submission.user_id, "Submission status changed",
-           f"{submission.reference_number} is now {status.replace('_', ' ').title()}.",
-           "PG_STATUS", pigeonhole_id=submission.id)
+    comment = str(body.get("comment") or f"Status changed to {status.replace('_', ' ').lower()}.").strip()
+    db.session.add(PigeonholeUpdate(submission_id=submission.id, user_id=g.user.id,
+                                    status=PgStatus(status), comment=comment))
+    if submission.user_id:
+        notify(submission.user_id, "Submission status changed",
+               f"{submission.reference_number} is now {status.replace('_', ' ').title()}.")
     log_action(request, g.user.id, "PIGEONHOLE_STATUS_CHANGED", "Pigeonhole", submission.id, status)
     db.session.commit()
     return jsonify({"ok": True})
@@ -181,25 +144,17 @@ def respond_pigeonhole(pg_id):
     response_text = str(body.get("response", "")).strip()
     if not (2 <= len(response_text) <= 5000):
         return jsonify({"error": "Response must be 2-5000 characters."}), 400
-
-    submission = _scoped_get(g.user, pg_id)
+    submission = PigeonholeSubmission.query.get(pg_id)
     if not submission:
         return jsonify({"error": "Not found"}), 404
-
     submission.response = response_text
     submission.status = PgStatus.RESPONSE_PROVIDED
-    submission.responded_at = datetime.utcnow()
-    if not submission.assigned_officer_id and g.user.role == Role.OFFICER:
-        submission.assigned_officer_id = g.user.id
-
     db.session.add(PigeonholeUpdate(
-        pigeonhole_id=submission.id, user_id=g.user.id,
-        status=PgStatus.RESPONSE_PROVIDED, response=response_text,
-    ))
-    # No-op for anonymous submissions since user_id is None.
-    notify(submission.user_id, "Response provided",
-           f"A response is available for {submission.reference_number}.",
-           "PG_RESPONSE", pigeonhole_id=submission.id)
+        submission_id=submission.id, user_id=g.user.id,
+        status=PgStatus.RESPONSE_PROVIDED, comment=response_text))
+    if submission.user_id:
+        notify(submission.user_id, "Response provided",
+               f"A response is available for {submission.reference_number}.")
     log_action(request, g.user.id, "PIGEONHOLE_RESPONSE_CREATED", "Pigeonhole", submission.id)
     db.session.commit()
     return jsonify({"ok": True})
@@ -208,18 +163,7 @@ def respond_pigeonhole(pg_id):
 @bp.put("/pigeonhole/<int:pg_id>/assign")
 @require_roles(Role.ADMIN)
 def assign_pigeonhole(pg_id):
-    body = request.get_json(silent=True) or {}
-    officer_id = body.get("officerId")
-    submission = PigeonholeSubmission.query.get(pg_id)
-    if not submission:
+    # Assignment is not representable in the existing TiDB schema.
+    if not PigeonholeSubmission.query.get(pg_id):
         return jsonify({"error": "Not found"}), 404
-    officer = User.query.filter_by(id=officer_id, role=Role.OFFICER).first()
-    if not officer:
-        return jsonify({"error": "Unknown officer"}), 400
-    submission.assigned_officer_id = officer.id
-    if submission.status == PgStatus.SUBMITTED:
-        submission.status = PgStatus.ASSIGNED
-    log_action(request, g.user.id, "PIGEONHOLE_ASSIGNED", "Pigeonhole", submission.id,
-               f"officer={officer.id}")
-    db.session.commit()
-    return jsonify({"ok": True})
+    return jsonify({"error": "Pigeonhole assignment is not supported by the current database schema."}), 409
