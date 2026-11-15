@@ -12,7 +12,7 @@ type SubmissionStatus = typeof VALID_STATUSES[number];
 async function getOptionalUser(req: Request) {
   const token = getSessionToken(req);
   if (!token) return null;
-  let payload;
+  let payload: ReturnType<typeof verifyAccessToken>;
   try { payload = verifyAccessToken(token); }
   catch { throw new Error("INVALID_SESSION"); }
   const user = await prisma.user.findUnique({
