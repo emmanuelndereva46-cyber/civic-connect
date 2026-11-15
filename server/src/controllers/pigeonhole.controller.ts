@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "../config/prisma.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { getSessionToken } from "../middleware/auth.middleware.js";
+import { getSessionToken } from "../middleware/auth.middleware.js";
 
 const VALID_TYPES = [
   "SUGGESTION",
