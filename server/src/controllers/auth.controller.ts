@@ -139,3 +139,37 @@ export function requestPasswordReset(_req: Request, res: Response): void {
     message: "Password reset is temporarily unavailable because email delivery has not been configured. Contact the system administrator."
   });
 }
+
+export async function changePassword(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.userId;
+    const { currentPassword, newPassword } = req.body ?? {};
+    if (!userId) { res.status(401).json({ message: "Authentication required." }); return; }
+    if (typeof currentPassword !== "string" || typeof newPassword !== "string" ||
+        newPassword.length < 12 || newPassword.length > 72 ||
+        !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      res.status(400).json({ message: "New password must be 12-72 characters and include an uppercase letter and a number." }); return;
+    }
+    const user = await prisma.user.findFirst({
+      where: { id: userId, accountStatus: "ACTIVE" },
+      select: { id: true, role: true, passwordHash: true }
+    });
+    if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      res.status(400).json({ message: "Current password is incorrect." }); return;
+    }
+    if (await bcrypt.compare(newPassword, user.passwordHash)) {
+      res.status(400).json({ message: "Choose a new password different from your current password." }); return;
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: await bcrypt.hash(newPassword, 12) }
+    });
+    await prisma.auditLog.create({
+      data: { userId, action: "PASSWORD_CHANGED", entityType: "USER", entityId: String(userId), ipAddress: req.ip ?? null }
+    });
+    res.status(200).json({ message: "Password changed successfully." });
+  } catch (error) {
+    console.error("Password change failed:", error);
+    res.status(500).json({ message: "Could not change your password." });
+  }
+}
