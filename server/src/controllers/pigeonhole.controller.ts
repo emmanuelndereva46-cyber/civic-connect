@@ -26,7 +26,12 @@ async function getOptionalUser(
 
   if (!token) return null;
 
-  const payload = verifyAccessToken(token);
+  let payload;
+  try {
+    payload = verifyAccessToken(token);
+  } catch {
+    throw new Error("INVALID_TOKEN");
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
