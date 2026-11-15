@@ -193,6 +193,22 @@ function DepartmentsTab() {
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
   const [routingError, setRoutingError] = useState("");
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState("");
+  const nairobiSectors = [
+    ["Boroughs Administration and Personnel", "County public service, borough and sub-county administration, and personnel coordination."],
+    ["Built Environment and Urban Planning Sector", "County lands administration, surveying, mapping, urban planning, development control, housing and urban renewal."],
+    ["Business and Hustler Opportunities", "Trade development, markets, business licensing, enterprise and cooperative development."],
+    ["Finance and Economic Planning Affairs", "County finance, revenue, budgeting, accounting, economic planning and resource management."],
+    ["Green Nairobi (Environment, Water, Food and Agriculture)", "Environment, solid waste, water and sanitation, food and agriculture, forestry and natural resources."],
+    ["Health Wellness and Nutrition", "County health facilities, public health, wellness, nutrition and related county health services."],
+    ["Inclusivity, Public Participation And Customer Service Sector", "Citizen engagement, public participation, inclusivity, public communication and customer service."],
+    ["Innovation and Digital Economy", "County ICT infrastructure, digital services, innovation, data and digital economy programmes."],
+    ["Mobility and Works", "County mobility, roads, transport, public works, parking, street lighting and drainage."],
+    ["Security and Compliance Sub Sector", "County inspectorate, investigations, information analysis and enforcement of county compliance."],
+    ["Talents, Skills Development and Care", "Early childhood development, vocational training, sports, culture, recreation and community care."]
+  ];
+
 
   async function load() {
     const [d, c] = await Promise.all([api.get("/departments"), api.get("/categories")]);
@@ -217,8 +233,23 @@ function DepartmentsTab() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div>
-        <h3 className="font-semibold text-civic-navy">Departments</h3>
-        <form onSubmit={addDept} className="mt-2 flex gap-2">
+        <h3 className="font-semibold text-civic-navy">Nairobi City County departments</h3>
+        <p className="mt-1 text-xs text-civic-ink/60">Official county sectors and sub-sectors. Add missing entries without duplicating existing departments.</p>
+        <button type="button" disabled={seeding} onClick={async () => {
+          setSeeding(true); setSeedMessage("");
+          let created = 0; let existing = 0; let failed = 0;
+          for (const [name, description] of nairobiSectors) {
+            try { await api.post("/departments", { name, description }); created++; }
+            catch (err) { if (err.response?.status === 409) existing++; else failed++; }
+          }
+          await load();
+          setSeedMessage(`Added ${created}; already present ${existing}; failed ${failed}. Review the list before assigning officers.`);
+          setSeeding(false);
+        }} className="mt-3 rounded-md border border-civic-line px-3 py-2 text-sm font-medium disabled:opacity-50">
+          {seeding ? "Adding county sectors…" : "Add Nairobi City County sectors"}
+        </button>
+        {seedMessage && <p className="mt-2 text-xs text-civic-ink/70">{seedMessage}</p>}
+        <form onSubmit={addDept} className="mt-3 flex gap-2">
           <input value={newDept} onChange={(e) => setNewDept(e.target.value)} placeholder="New department name"
             className="flex-1 rounded-md border border-civic-line px-3 py-2 text-sm" />
           <button className="rounded-md bg-civic-navy px-3 py-2 text-sm font-medium text-white">Add</button>
