@@ -24,13 +24,12 @@ function StatCard({ label, value }) {
 function ReportPanel({ report, onClose, onChanged }) {
   const [status, setStatus] = useState(report.status);
   const [comment, setComment] = useState("");
-  const [actionTaken, setActionTaken] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function save() {
     setSaving(true);
     try {
-      await api.put(`/reports/${report.id}/status`, { status, comment: comment || undefined, actionTaken: actionTaken || undefined });
+      await api.put(`/reports/${report.id}/status`, { status, comment: comment || undefined });
       onChanged();
       onClose();
     } finally {
@@ -62,11 +61,6 @@ function ReportPanel({ report, onClose, onChanged }) {
           <div>
             <label className="text-sm font-medium">Comment / remarks</label>
             <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3}
-              className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Action taken</label>
-            <textarea value={actionTaken} onChange={(e) => setActionTaken(e.target.value)} rows={2}
               className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm" />
           </div>
         </div>
@@ -178,15 +172,13 @@ export default function OfficerDashboard() {
   const newReports = reports.filter((r) => r.status === "SUBMITTED").length;
   const inProgress = reports.filter((r) => ["ASSIGNED", "IN_PROGRESS"].includes(r.status)).length;
   const resolved = reports.filter((r) => ["RESOLVED", "CLOSED"].includes(r.status)).length;
-  const highPriority = reports.filter((r) => r.priority === "HIGH" || r.priority === "URGENT").length;
 
   return (
     <DashboardLayout title="Officer dashboard" items={SIDEBAR}>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <StatCard label="New reports" value={newReports} />
         <StatCard label="In progress" value={inProgress} />
         <StatCard label="Resolved" value={resolved} />
-        <StatCard label="High priority" value={highPriority} />
       </div>
 
       <div className="mt-8 flex gap-2 border-b border-civic-line">
@@ -206,7 +198,7 @@ export default function OfficerDashboard() {
             <thead className="bg-civic-bg text-xs uppercase text-civic-ink/50">
               <tr>
                 <th className="px-4 py-2">Reference</th><th className="px-4 py-2">Issue</th>
-                <th className="px-4 py-2">Priority</th><th className="px-4 py-2">Status</th><th className="px-4 py-2"></th>
+                <th className="px-4 py-2">Location</th><th className="px-4 py-2">Status</th><th className="px-4 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -216,7 +208,7 @@ export default function OfficerDashboard() {
                 <tr key={r.id} className="border-t border-civic-line">
                   <td className="px-4 py-2 font-medium">{r.referenceNumber}</td>
                   <td className="px-4 py-2">{r.title}</td>
-                  <td className="px-4 py-2 capitalize">{r.priority ? r.priority.toLowerCase() : "not recorded"}</td>
+                  <td className="px-4 py-2">{r.location || "Not recorded"}</td>
                   <td className="px-4 py-2"><StatusBadge status={r.status} /></td>
                   <td className="px-4 py-2 text-right">
                     <button onClick={() => setSelectedReport(r)} className="text-civic-blue hover:underline">Open</button>
