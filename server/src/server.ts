@@ -59,7 +59,7 @@ app.get("/api/auth/me", authenticateToken, async (req: AuthenticatedRequest, res
       select: { id: true, fullName: true, email: true, phone: true, role: true, accountStatus: true, createdAt: true }
     });
     if (!user) {
-      res.clearCookie("civicconnect_session", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
+      res.clearCookie("civicconnect_session", { httpOnly: true, secure: process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL), sameSite: "lax", path: "/" });
       res.status(401).json({ message: "Session is no longer valid." });
       return;
     }
