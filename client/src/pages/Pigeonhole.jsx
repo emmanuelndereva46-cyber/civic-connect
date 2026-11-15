@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
@@ -24,10 +24,6 @@ export default function Pigeonhole() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
-
-  useEffect(() => {
-    if (!user) setAnonymous(true);
-  }, [user]);
 
   function update(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
