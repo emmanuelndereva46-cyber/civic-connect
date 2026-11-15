@@ -81,7 +81,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ message: "An unexpected server error occurred." });
 });
 
-if (!process.env.VERCEL) {
+if (process.env.VERCEL_CONTAINER === "1" || !process.env.VERCEL) {
   const server = app.listen(PORT, () => console.log(`CivicConnect API running at http://localhost:${PORT}`));
   const shutdown = () => {
     server.close(async () => {
