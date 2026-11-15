@@ -34,7 +34,7 @@ export default function ReportIssue() {
   const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({
-    title: "", description: "", categoryId: "", dateObserved: "", priority: "MEDIUM",
+    title: "", description: "", categoryId: "",
     county: "", subCounty: "", ward: "", location: "", latitude: null, longitude: null,
   });
   const [images, setImages] = useState([]); // { file, previewUrl }
@@ -201,33 +201,16 @@ async function handleSubmit() {
                 className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue"
                 placeholder="What is the issue, and how is it affecting the community?" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium">Category</label>
-                <select value={form.categoryId} onChange={update("categoryId")}
-                  className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue">
-                  <option value="">Select a category</option>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                {selectedCategory && (
-                  <p className="mt-1 text-xs text-civic-ink/50">Routes to {selectedCategory.department?.name ?? "Unassigned department"}</p>
-                )}
-              </div>
-              <div>
-                <label className="text-sm font-medium">Priority</label>
-                <select value={form.priority} onChange={update("priority")}
-                  className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue">
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
-                </select>
-              </div>
-            </div>
             <div>
-              <label className="text-sm font-medium">Date observed <span className="text-civic-ink/40">(optional)</span></label>
-              <input type="date" value={form.dateObserved} onChange={update("dateObserved")}
-                className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
+              <label className="text-sm font-medium">Category</label>
+              <select value={form.categoryId} onChange={update("categoryId")}
+                className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue">
+                <option value="">Select a category</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              {selectedCategory && (
+                <p className="mt-1 text-xs text-civic-ink/50">Routes to {selectedCategory.department?.name ?? "Unassigned department"}</p>
+              )}
             </div>
           </div>
         )}
