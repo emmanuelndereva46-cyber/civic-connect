@@ -93,3 +93,37 @@ export async function createCategory(req: Request, res: Response): Promise<void>
     res.status(500).json({ message: "Could not create category." });
   }
 }
+
+export async function assignCategoryDepartment(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.userId;
+    const categoryId = Number(req.params.id);
+    const departmentId = Number(req.body?.departmentId);
+    if (!userId) { res.status(401).json({ message: "Authentication required." }); return; }
+    if (!Number.isSafeInteger(categoryId) || categoryId < 1 ||
+        !Number.isSafeInteger(departmentId) || departmentId < 1) {
+      res.status(400).json({ message: "Select a valid category and department." }); return;
+    }
+    const [category, department] = await Promise.all([
+      prisma.category.findUnique({ where: { id: categoryId }, select: { id: true, name: true } }),
+      prisma.department.findFirst({ where: { id: departmentId, isActive: true }, select: { id: true, name: true } })
+    ]);
+    if (!category) { res.status(404).json({ message: "Category not found." }); return; }
+    if (!department) { res.status(400).json({ message: "Selected department is unavailable." }); return; }
+    const updated = await prisma.category.update({
+      where: { id: categoryId },
+      data: { departmentId },
+      select: { id: true, name: true, department: { select: { id: true, name: true } } }
+    });
+    await prisma.auditLog.create({
+      data: {
+        userId, action: "CATEGORY_DEPARTMENT_ASSIGNED", entityType: "CATEGORY",
+        entityId: String(categoryId), details: department.name, ipAddress: req.ip ?? null
+      }
+    });
+    res.status(200).json({ ...updated, departmentName: updated.department?.name ?? null });
+  } catch (error) {
+    console.error("Category department assignment failed:", error);
+    res.status(500).json({ message: "Could not assign the category to that department." });
+  }
+}
