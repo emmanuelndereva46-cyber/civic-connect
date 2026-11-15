@@ -12,7 +12,9 @@ type SubmissionStatus = typeof VALID_STATUSES[number];
 async function getOptionalUser(req: Request) {
   const token = getSessionToken(req);
   if (!token) return null;
-  const payload = verifyAccessToken(token);
+  let payload;
+  try { payload = verifyAccessToken(token); }
+  catch { throw new Error("INVALID_SESSION"); }
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: { id: true, role: true, accountStatus: true }
@@ -178,6 +180,10 @@ export async function submitPigeonhole(req: Request, res: Response): Promise<voi
       trackingMethod: "Keep this reference number private; it is the key used to check the submission."
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_SESSION") {
+      res.status(401).json({ message: "Your session is invalid or expired." });
+      return;
+    }
     if (error instanceof Error && error.message === "INACTIVE_ACCOUNT") {
       res.status(403).json({ message: "Your account is not active." });
       return;
