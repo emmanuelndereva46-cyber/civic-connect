@@ -25,13 +25,17 @@ function ReportPanel({ report, onClose, onChanged }) {
   const [status, setStatus] = useState(report.status);
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function save() {
     setSaving(true);
+    setError("");
     try {
       await api.put(`/reports/${report.id}/status`, { status, comment: comment || undefined });
-      onChanged();
+      await onChanged();
       onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not save this report update. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -50,6 +54,7 @@ function ReportPanel({ report, onClose, onChanged }) {
           Reported by {report.citizenName || "citizen"} · {[report.location, report.ward, report.county].filter(Boolean).join(", ")}
         </p>
 
+        {error && <p role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <div className="mt-5 space-y-3">
           <div>
             <label className="text-sm font-medium">Status</label>
@@ -81,12 +86,16 @@ export default function OfficerDashboard() {
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   async function loadAll() {
     setLoading(true);
+    setLoadError("");
     try {
       const { data } = await api.get("/reports");
-      setReports(data);
+      setReports(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setLoadError(err.response?.data?.message || "Could not load department reports. Refresh and try again.");
     } finally {
       setLoading(false);
     }
@@ -100,6 +109,7 @@ export default function OfficerDashboard() {
 
   return (
     <DashboardLayout title="Officer dashboard" items={SIDEBAR}>
+      {loadError && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700"><span>{loadError}</span><button onClick={loadAll} className="font-semibold underline">Retry</button></div>}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <StatCard label="New reports" value={newReports} />
         <StatCard label="In progress" value={inProgress} />
