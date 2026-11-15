@@ -10,7 +10,7 @@ const trackingLimiter = rateLimit({
   legacyHeaders: false
 });
 
-router.get("/report/:referenceNumber", trackingLimiter, trackReportByReference);
-router.get("/pigeonhole", trackingLimiter, trackPigeonhole);
+router.post("/report", trackingLimiter, trackReportByReference);
+router.post("/pigeonhole", trackingLimiter, trackPigeonhole);
 
 export default router;
