@@ -1,9 +1,8 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { trackPigeonhole } from "../controllers/track.controller.js";
+import { trackPigeonhole, trackReportByReference } from "../controllers/track.controller.js";
 
 const router = Router();
-
 const trackingLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -11,6 +10,7 @@ const trackingLimiter = rateLimit({
   legacyHeaders: false
 });
 
+router.get("/report/:referenceNumber", trackingLimiter, trackReportByReference);
 router.get("/pigeonhole", trackingLimiter, trackPigeonhole);
 
 export default router;
