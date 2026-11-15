@@ -440,7 +440,7 @@ export async function updateReportStatus(req: Request, res: Response): Promise<v
         data: {
           status: status as any,
           ...(status === "RESOLVED" ? { resolvedAt: new Date() } : {}),
-          ...(status === "ASSIGNED" ? { assignedOfficerId: userId } : {})
+          ...(role === "GOVERNMENT_OFFICER" && status === "ASSIGNED" ? { assignedOfficerId: userId } : {})
         }
       });
       await tx.reportUpdate.create({
