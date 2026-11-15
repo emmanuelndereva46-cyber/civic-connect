@@ -190,6 +190,9 @@ function DepartmentsTab() {
   const [categories, setCategories] = useState([]);
   const [newDept, setNewDept] = useState("");
   const [newCat, setNewCat] = useState({ name: "", departmentId: "" });
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+  const [routingError, setRoutingError] = useState("");
 
   async function load() {
     const [d, c] = await Promise.all([api.get("/departments"), api.get("/categories")]);
@@ -236,10 +239,33 @@ function DepartmentsTab() {
           </select>
           <button className="rounded-md bg-civic-navy px-3 py-2 text-sm font-medium text-white">Add</button>
         </form>
+        <div className="mt-4 rounded-lg border border-civic-line bg-white p-3">
+          <h4 className="text-sm font-semibold text-civic-navy">Route an existing category</h4>
+          <p className="mt-1 text-xs text-civic-ink/60">Assign existing unassigned categories to the responsible department.</p>
+          {routingError && <p className="mt-2 text-sm text-red-600">{routingError}</p>}
+          <form className="mt-3 flex flex-wrap gap-2" onSubmit={async (e) => {
+            e.preventDefault(); setRoutingError("");
+            if (!selectedCategoryId || !selectedDepartmentId) return setRoutingError("Select both a category and department.");
+            try {
+              await api.put(`/categories/${selectedCategoryId}/department`, { departmentId: Number(selectedDepartmentId) });
+              setSelectedCategoryId(""); setSelectedDepartmentId(""); await load();
+            } catch (err) { setRoutingError(err.response?.data?.message || "Could not assign this category."); }
+          }}>
+            <select required value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} className="min-w-40 flex-1 rounded-md border border-civic-line px-3 py-2 text-sm">
+              <option value="">Select category</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}{c.departmentName ? ` — ${c.departmentName}` : " — Unassigned"}</option>)}
+            </select>
+            <select required value={selectedDepartmentId} onChange={(e) => setSelectedDepartmentId(e.target.value)} className="min-w-40 flex-1 rounded-md border border-civic-line px-3 py-2 text-sm">
+              <option value="">Select department</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <button className="rounded-md bg-civic-navy px-3 py-2 text-sm font-medium text-white">Assign</button>
+          </form>
+        </div>
         <ul className="mt-3 divide-y divide-civic-line rounded-lg border border-civic-line bg-white text-sm">
           {categories.map((c) => (
             <li key={c.id} className="flex justify-between px-4 py-2">
-              <span>{c.name}</span><span className="text-civic-ink/50">{c.departmentName}</span>
+              <span>{c.name}</span><span className="text-civic-ink/50">{c.departmentName || "Unassigned"}</span>
             </li>
           ))}
         </ul>
