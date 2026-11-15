@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateToken } from "../middleware/auth.middleware.js";
+import { authenticateToken, requireRoles } from "../middleware/auth.middleware.js";
 import {
   listPigeonhole,
   respondToPigeonhole,
@@ -9,9 +9,9 @@ import {
 
 const router = Router();
 
-router.get("/", authenticateToken, listPigeonhole);
+router.get("/", authenticateToken, requireRoles("SYSTEM_ADMINISTRATOR"), listPigeonhole);
 router.post("/", submitPigeonhole);
-router.put("/:id/status", authenticateToken, updatePigeonholeStatus);
-router.post("/:id/response", authenticateToken, respondToPigeonhole);
+router.put("/:id/status", authenticateToken, requireRoles("SYSTEM_ADMINISTRATOR"), updatePigeonholeStatus);
+router.post("/:id/response", authenticateToken, requireRoles("SYSTEM_ADMINISTRATOR"), respondToPigeonhole);
 
 export default router;
