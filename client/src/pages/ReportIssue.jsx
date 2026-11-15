@@ -288,9 +288,8 @@ async function handleSubmit() {
                 <div><dt className="text-civic-ink/50">Title</dt><dd className="font-medium">{form.title}</dd></div>
                 <div><dt className="text-civic-ink/50">Description</dt><dd>{form.description}</dd></div>
                 <div><dt className="text-civic-ink/50">Category</dt><dd>{selectedCategory?.name} → {selectedCategory?.department?.name ?? "Unassigned department"}</dd></div>
-                <div><dt className="text-civic-ink/50">Priority</dt><dd className="capitalize">{form.priority.toLowerCase()}</dd></div>
                 <div><dt className="text-civic-ink/50">Location</dt><dd>{[form.location, form.ward, form.subCounty, form.county].filter(Boolean).join(", ") || "Not provided"}</dd></div>
-                <div><dt className="text-civic-ink/50">Photos attached</dt><dd>{images.length}</dd></div>
+                <div><dt className="text-civic-ink/50">Photos selected</dt><dd>{images.length} (preview only; not uploaded)</dd></div>
               </dl>
             </div>
           </div>
