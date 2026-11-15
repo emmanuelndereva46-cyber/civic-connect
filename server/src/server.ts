@@ -7,6 +7,8 @@ import departmentRoutes from "./routes/department.routes.js";
 import pigeonholeRoutes from "./routes/pigeonhole.routes.js";
 import trackRoutes from "./routes/track.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import categoryRoutes from "./routes/category.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 import { prisma } from "./config/prisma.js";
 import authRoutes from "./routes/auth.routes.js";
 import { authenticateToken, type AuthenticatedRequest } from "./middleware/auth.middleware.js";
@@ -95,6 +97,8 @@ app.use("/api/departments", departmentRoutes);
 app.use("/api/pigeonhole", pigeonholeRoutes);
 app.use("/api/track", trackRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("Unhandled API error:", err);
