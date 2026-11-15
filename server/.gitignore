@@ -1,8 +1,7 @@
-__pycache__/
-*.pyc
-venv/
 .env
-instance/
-migrations/
-
-/generated/prisma
+.env.*
+!.env.example
+node_modules/
+dist/
+generated/prisma/
+*.log
