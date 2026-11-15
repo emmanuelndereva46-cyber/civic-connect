@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "../config/prisma.js";
 import type { AuthenticatedRequest } from "../middleware/auth.middleware.js";
 
@@ -177,7 +177,12 @@ export async function bootstrapFirstAdmin(req: Request, res: Response): Promise<
     const suppliedToken = req.headers.authorization?.startsWith("Bearer ")
       ? req.headers.authorization.slice(7).trim()
       : "";
-    if (!configuredToken || !suppliedToken || suppliedToken !== configuredToken) {
+    if (!configuredToken || configuredToken.length < 32) {
+      res.status(503).json({ message: "Administrator bootstrap is not configured." }); return;
+    }
+    const expected = Buffer.from(configuredToken);
+    const supplied = Buffer.from(suppliedToken);
+    if (!suppliedToken || supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
       res.status(401).json({ message: "Valid bootstrap authorization is required." }); return;
     }
     const existingAdmins = await prisma.user.count({ where: { role: "SYSTEM_ADMINISTRATOR" } });
