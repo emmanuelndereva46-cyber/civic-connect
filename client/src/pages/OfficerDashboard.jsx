@@ -76,78 +76,6 @@ function ReportPanel({ report, onClose, onChanged }) {
   );
 }
 
-function PigeonholePanel({ submission, onClose, onChanged }) {
-  const [status, setStatus] = useState(submission.status);
-  const [response, setResponse] = useState(submission.response || "");
-  const [saving, setSaving] = useState(false);
-
-  async function saveStatus() {
-    setSaving(true);
-    try {
-      await api.put(`/pigeonhole/${submission.id}/status`, { status });
-      onChanged();
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function sendResponse() {
-    if (response.trim().length < 2) return;
-    setSaving(true);
-    try {
-      await api.post(`/pigeonhole/${submission.id}/response`, { response: response.trim() });
-      onChanged();
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-civic-navy">{submission.referenceNumber}</h3>
-          <StatusBadge status={submission.status} />
-        </div>
-        <p className="mt-1 text-xs uppercase tracking-wide text-civic-ink/40">{submission.submissionType}</p>
-        <h4 className="mt-2 font-medium">{submission.subject}</h4>
-        <p className="mt-1 text-sm text-civic-ink/70">{submission.message}</p>
-        {submission.anonymousSubmission && (
-          <p className="mt-2 text-xs text-amber-700">This submission is anonymous — no identifying details are shown.</p>
-        )}
-
-        <div className="mt-5 space-y-3">
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <label className="text-sm font-medium">Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)}
-                className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm">
-                {PG_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-              </select>
-            </div>
-            <button onClick={saveStatus} disabled={saving} className="rounded-md border border-civic-line px-3 py-2 text-sm font-medium disabled:opacity-60">
-              Update
-            </button>
-          </div>
-          <div>
-            <label className="text-sm font-medium">Response to citizen</label>
-            <textarea value={response} onChange={(e) => setResponse(e.target.value)} rows={4}
-              className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm" />
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md border border-civic-line px-4 py-2 text-sm font-medium">Close</button>
-          <button onClick={sendResponse} disabled={saving} className="rounded-md bg-civic-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-            {saving ? "Sending…" : "Send response"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function OfficerDashboard() {
   const [tab, setTab] = useState("reports");
   const [reports, setReports] = useState([]);
@@ -213,13 +141,9 @@ export default function OfficerDashboard() {
         </div>
       )}
 
-}
 
       {selectedReport && (
         <ReportPanel report={selectedReport} onClose={() => setSelectedReport(null)} onChanged={loadAll} />
-      )}
-      {selectedPg && (
-        <PigeonholePanel submission={selectedPg} onClose={() => setSelectedPg(null)} onChanged={loadAll} />
       )}
     </DashboardLayout>
   );
