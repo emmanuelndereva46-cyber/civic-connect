@@ -13,12 +13,31 @@ import { authenticateToken, type AuthenticatedRequest } from "./middleware/auth.
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
-const clientOrigin = process.env.CLIENT_URL || "http://localhost:5173";
+const configuredOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
+// Vercel terminates TLS/proxy traffic before it reaches the container.
+app.set("trust proxy", 1);
 app.disable("x-powered-by");
 app.use(helmet());
 app.use(cors({
-  origin: clientOrigin,
+  origin(origin, callback) {
+    // Same-origin browser requests and server-to-server requests need no CORS grant.
+    if (!origin) return callback(null, true);
+    try {
+      const requestOrigin = new URL(origin).origin;
+      const requestHost = new URL(origin).host;
+      // Allow the app's own Vercel host and explicitly configured local/dev origins.
+      if (configuredOrigins.includes(requestOrigin) || requestHost.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+    } catch {
+      return callback(new Error("Invalid request origin."));
+    }
+    return callback(new Error("Origin is not allowed by CORS."));
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -28,7 +47,9 @@ app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 100,
   standardHeaders: "draft-8",
-  legacyHeaders: false
+  legacyHeaders: false,
+  // Vercel sends both Forwarded and X-Forwarded-For; use Express's trusted proxy IP.
+  validate: { forwardedHeader: false }
 }));
 
 app.get("/", (_req, res) => res.status(200).json({
