@@ -9,8 +9,8 @@ const SIDEBAR = [
   { to: "/notifications", label: "Notifications", icon: Bell },
 ];
 
-const REPORT_STATUSES = ["SUBMITTED", "UNDER_REVIEW", "ASSIGNED", "IN_PROGRESS", "AWAITING_INFORMATION", "RESOLVED", "CLOSED", "REJECTED", "DUPLICATE"];
-const PG_STATUSES = ["SUBMITTED", "RECEIVED", "UNDER_REVIEW", "ASSIGNED", "IN_PROGRESS", "RESPONSE_PROVIDED", "CLOSED", "INVALID"];
+const REPORT_STATUSES = ["SUBMITTED", "UNDER_REVIEW", "ASSIGNED", "IN_PROGRESS", "AWAITING_INFORMATION", "RESOLVED", "CLOSED", "REJECTED"];
+const PG_STATUSES = ["SUBMITTED", "RECEIVED", "UNDER_REVIEW", "ASSIGNED", "IN_PROGRESS", "RESPONSE_PROVIDED", "CLOSED"];
 
 function StatCard({ label, value }) {
   return (
@@ -216,7 +216,7 @@ export default function OfficerDashboard() {
                 <tr key={r.id} className="border-t border-civic-line">
                   <td className="px-4 py-2 font-medium">{r.referenceNumber}</td>
                   <td className="px-4 py-2">{r.title}</td>
-                  <td className="px-4 py-2 capitalize">{r.priority.toLowerCase()}</td>
+                  <td className="px-4 py-2 capitalize">{r.priority ? r.priority.toLowerCase() : "not recorded"}</td>
                   <td className="px-4 py-2"><StatusBadge status={r.status} /></td>
                   <td className="px-4 py-2 text-right">
                     <button onClick={() => setSelectedReport(r)} className="text-civic-blue hover:underline">Open</button>
