@@ -9,6 +9,12 @@ import api from "../api/client";
 
 const AuthContext = createContext(null);
 
+function normalizeUser(user) {
+  if (!user) return null;
+  const roleMap = { GOVERNMENT_OFFICER: "OFFICER", SYSTEM_ADMINISTRATOR: "ADMIN" };
+  return { ...user, role: roleMap[user.role] || user.role, status: user.accountStatus || user.status };
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,7 +22,7 @@ export function AuthProvider({ children }) {
   const refresh = useCallback(async () => {
     try {
       const { data } = await api.get("/auth/me");
-      setUser(data?.user ?? data ?? null);
+      setUser(normalizeUser(data?.user ?? data ?? null));
     } catch (error) {
       // A 401 on first page load is expected when no session exists.
       if (error?.response?.status !== 401) {
@@ -38,9 +44,11 @@ export function AuthProvider({ children }) {
       password,
     });
 
-    const authenticatedUser = data?.user ?? (
+    const rawUser = data?.user ?? (
       data?.id ? { id: data.id, fullName: data.fullName, role: data.role } : null
     );
+
+    const authenticatedUser = normalizeUser(rawUser);
 
     if (!authenticatedUser?.role) {
       throw new Error("The server did not return a valid user profile.");
