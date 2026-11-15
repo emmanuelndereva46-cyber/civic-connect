@@ -77,7 +77,6 @@ const { data } = await api.get(
 
 function PigeonholeLookup() {
   const [ref, setRef] = useState("");
-  const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -86,10 +85,10 @@ function PigeonholeLookup() {
     e.preventDefault();
     setError(""); setResult(null); setLoading(true);
     try {
-      const { data } = await api.get("/track/pigeonhole", { params: { ref: ref.trim(), code: code.trim() } });
+      const { data } = await api.get("/track/pigeonhole", { params: { ref: ref.trim() } });
       setResult(data);
     } catch {
-      setError("No matching anonymous submission — check your reference and access code.");
+      setError("No matching submission — check your reference number.");
     } finally {
       setLoading(false);
     }
@@ -98,12 +97,10 @@ function PigeonholeLookup() {
   return (
     <div>
       <p className="mb-4 text-sm text-civic-ink/60">
-        For anonymous Pigeonhole submissions only. Non-anonymous submissions can be tracked from your dashboard after logging in.
+        For anonymous submissions. Keep the reference number private; it is the tracking credential for this submission.
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="PG-2026-000001"
-          className="w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
-        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Access code"
+        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="PG- followed by 26 letters or numbers"
           className="w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
         <button disabled={loading} className="w-full rounded-md bg-civic-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
           {loading ? "Checking…" : "Check status"}
