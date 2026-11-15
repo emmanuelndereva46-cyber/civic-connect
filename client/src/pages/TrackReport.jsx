@@ -14,7 +14,7 @@ function ReportLookup() {
     setError(""); setResult(null); setLoading(true);
     try {
 const { data } = await api.get(
-  `/reports/track/${encodeURIComponent(ref.trim())}`
+  `/track/report/${encodeURIComponent(ref.trim())}`
 );
       setResult(data);
     } catch {
@@ -27,7 +27,7 @@ const { data } = await api.get(
   return (
     <div>
       <form onSubmit={handleSubmit} className="flex gap-2">
-        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="CC-2026-000001"
+        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="CC- followed by 26 letters or numbers"
           className="flex-1 rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
         <button disabled={loading} className="rounded-md bg-civic-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
           {loading ? "Searching…" : "Track"}
@@ -62,12 +62,6 @@ const { data } = await api.get(
     </p>
   </li>
 ))}
-            {result.updates.map((u, i) => (
-              <li key={i}>
-                <span className="font-medium capitalize">{(u.status || "").replace(/_/g, " ").toLowerCase()}</span>
-                {u.comment && <span className="text-civic-ink/60"> — {u.comment}</span>}
-              </li>
-            ))}
           </ol>
         </div>
       )}
@@ -100,7 +94,7 @@ function PigeonholeLookup() {
         For anonymous submissions. Keep the reference number private; it is the tracking credential for this submission.
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="PG- followed by 26 letters or numbers"
+        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="PG- followed by 26 hexadecimal characters"
           className="w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
         <button disabled={loading} className="w-full rounded-md bg-civic-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
           {loading ? "Checking…" : "Check status"}
