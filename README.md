@@ -156,12 +156,12 @@ All paths are under `/api`.
 | GET | `/reports` | Citizen-owned, officer department-scoped, or admin-wide |
 | GET | `/reports/:id` | Same report scope as above |
 | PUT | `/reports/:id/status` | Officer in department or administrator |
-| GET | `/track/report/:referenceNumber` | Public, rate-limited; reference required |
+| POST | `/track/report` | Public, rate-limited; reference in request body |
 | POST | `/pigeonhole` | Public; anonymous or authenticated |
 | GET | `/pigeonhole` | Authenticated; own citizen items or staff queue |
 | PUT | `/pigeonhole/:id/status` | Officer or administrator |
 | POST | `/pigeonhole/:id/response` | Officer or administrator |
-| GET | `/track/pigeonhole?ref=` | Public, rate-limited; private reference required |
+| POST | `/track/pigeonhole` | Public, rate-limited; private reference in request body |
 | GET | `/departments` | Public |
 | POST | `/departments` | Administrator |
 | GET | `/categories` | Public |
