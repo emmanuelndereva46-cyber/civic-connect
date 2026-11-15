@@ -16,7 +16,6 @@ export default function Profile() {
   const { user, refresh } = useAuth();
   const [form, setForm] = useState({
     fullName: user?.fullName || "", phone: user?.phone || "",
-    county: user?.county || "", location: user?.location || "",
   });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -33,7 +32,7 @@ export default function Profile() {
       await refresh();
       setSaved(true);
     } catch (err) {
-      setError(err.response?.data?.error || "Could not save your profile.");
+      setError(err.response?.data?.message || "Could not save your profile.");
     }
   }
 
@@ -56,14 +55,7 @@ export default function Profile() {
             <label className="text-sm font-medium">Phone</label>
             <input value={form.phone} onChange={update("phone")} className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
           </div>
-          <div>
-            <label className="text-sm font-medium">County</label>
-            <input value={form.county} onChange={update("county")} className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Location</label>
-            <input value={form.location} onChange={update("location")} className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
-          </div>
+          <p className="text-xs text-civic-ink/50">The current account database stores your name and phone number. County and residential address are not stored.</p>
           <button className="rounded-md bg-civic-navy px-4 py-2 text-sm font-semibold text-white hover:bg-civic-blue">Save changes</button>
         </form>
       </div>
