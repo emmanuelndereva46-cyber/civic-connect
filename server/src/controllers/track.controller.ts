@@ -3,7 +3,7 @@ import { prisma } from "../config/prisma.js";
 
 export async function trackReportByReference(req: Request, res: Response): Promise<void> {
   try {
-    const referenceNumber = String(req.params.referenceNumber ?? "").trim().toUpperCase();
+    const referenceNumber = String(req.body?.referenceNumber ?? "").trim().toUpperCase();
     if (!/^CC-[A-F0-9]{26}$/.test(referenceNumber)) {
       res.status(400).json({ message: "Enter a valid report reference number." });
       return;
@@ -31,7 +31,7 @@ export async function trackReportByReference(req: Request, res: Response): Promi
 
 export async function trackPigeonhole(req: Request, res: Response): Promise<void> {
   try {
-    const referenceNumber = String(req.query.ref ?? "").trim().toUpperCase();
+    const referenceNumber = String(req.body?.ref ?? "").trim().toUpperCase();
     if (!/^PG-[A-F0-9]{26}$/.test(referenceNumber)) {
       res.status(400).json({ message: "Enter a valid Pigeonhole reference number." });
       return;
