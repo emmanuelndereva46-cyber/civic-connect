@@ -87,12 +87,13 @@ export async function createStaffUser(req: Request, res: Response): Promise<void
         !["OFFICER", "ADMIN"].includes(role)) {
       res.status(400).json({ message: "Provide a valid name, email and staff role." }); return;
     }
-    let department = null;
+    let departmentIdToAssign: number | null = null;
     if (role === "OFFICER") {
       const id = Number(departmentId);
       if (!Number.isSafeInteger(id) || id < 1) { res.status(400).json({ message: "Select a department for this officer." }); return; }
-      department = await prisma.department.findFirst({ where: { id, isActive: true }, select: { id: true } });
+      const department = await prisma.department.findFirst({ where: { id, isActive: true }, select: { id: true } });
       if (!department) { res.status(400).json({ message: "Selected department is unavailable." }); return; }
+      departmentIdToAssign = department.id;
     }
     const cleanEmail = email.trim().toLowerCase();
     if (await prisma.user.findUnique({ where: { email: cleanEmail }, select: { id: true } })) {
@@ -104,7 +105,7 @@ export async function createStaffUser(req: Request, res: Response): Promise<void
       data: {
         fullName: fullName.trim(), email: cleanEmail, passwordHash,
         role: role === "OFFICER" ? "GOVERNMENT_OFFICER" : "SYSTEM_ADMINISTRATOR",
-        accountStatus: "ACTIVE", departmentId: department?.id ?? null
+        accountStatus: "ACTIVE", departmentId: departmentIdToAssign
       },
       select: { id: true, fullName: true, email: true, role: true }
     });
