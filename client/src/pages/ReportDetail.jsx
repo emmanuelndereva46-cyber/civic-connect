@@ -71,12 +71,6 @@ useEffect(() => {
   <dt className="text-civic-ink/50">Department</dt>
   <dd>{report.department?.name ?? "Not assigned"}</dd>
 </div>
-<div>
-  <dt className="text-civic-ink/50">Priority</dt>
-  <dd className="capitalize">
-    {report.priority?.toLowerCase() ?? "Not specified"}
-  </dd>
-</div>
             <div>
   <dt className="text-civic-ink/50">Location</dt>
   <dd>{report.location || "Not specified"}</dd>
@@ -97,7 +91,6 @@ useEffect(() => {
                 <li key={u.id}>
                   <p className="font-medium capitalize">{(u.status || "Comment").replace(/_/g, " ").toLowerCase()}</p>
                   {u.comment && <p className="text-civic-ink/70">{u.comment}</p>}
-                  {u.actionTaken && <p className="text-civic-ink/70">Action taken: {u.actionTaken}</p>}
                   <p className="text-civic-ink/40">{new Date(u.createdAt).toLocaleString()}</p>
                 </li>
               ))}
