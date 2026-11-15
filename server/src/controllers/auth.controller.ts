@@ -131,3 +131,11 @@ export async function updateMe(req: Request, res: Response): Promise<void> {
     res.status(500).json({ message: "Could not update your profile." });
   }
 }
+
+export function requestPasswordReset(_req: Request, res: Response): void {
+  // Do not pretend to send a reset email. No email delivery provider is
+  // configured for this deployment yet.
+  res.status(503).json({
+    message: "Password reset is temporarily unavailable because email delivery has not been configured. Contact the system administrator."
+  });
+}
