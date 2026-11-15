@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { prisma } from "../config/prisma.js";
 import { createAccessToken } from "../utils/jwt.js";
+import type { AuthenticatedRequest } from "../middleware/auth.middleware.js";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COOKIE_NAME = "civicconnect_session";
@@ -92,4 +93,41 @@ export function logout(_req: Request, res: Response): void {
     path: "/"
   });
   res.status(200).json({ message: "Logged out successfully." });
+}
+
+export async function updateMe(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.userId;
+    if (!userId) { res.status(401).json({ message: "Authentication required." }); return; }
+    const { fullName, phone } = req.body ?? {};
+    if (typeof fullName !== "string" || fullName.trim().length < 2 || fullName.trim().length > 150) {
+      res.status(400).json({ message: "Full name must contain between 2 and 150 characters." }); return;
+    }
+    if (phone !== undefined && phone !== null && typeof phone !== "string") {
+      res.status(400).json({ message: "Phone number must be a string." }); return;
+    }
+    const cleanPhone = typeof phone === "string" && phone.trim() ? phone.trim() : null;
+    if (cleanPhone && cleanPhone.length > 30) {
+      res.status(400).json({ message: "Phone number must not exceed 30 characters." }); return;
+    }
+    if (cleanPhone) {
+      const duplicate = await prisma.user.findFirst({
+        where: { phone: cleanPhone, id: { not: userId } },
+        select: { id: true }
+      });
+      if (duplicate) { res.status(409).json({ message: "That phone number is already in use." }); return; }
+    }
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { fullName: fullName.trim(), phone: cleanPhone },
+      select: { id: true, fullName: true, email: true, phone: true, role: true, accountStatus: true, createdAt: true }
+    });
+    await prisma.auditLog.create({
+      data: { userId, action: "PROFILE_UPDATED", entityType: "USER", entityId: String(userId), ipAddress: req.ip ?? null }
+    });
+    res.status(200).json({ message: "Profile updated.", user });
+  } catch (error) {
+    console.error("Profile update failed:", error);
+    res.status(500).json({ message: "Could not update your profile." });
+  }
 }
