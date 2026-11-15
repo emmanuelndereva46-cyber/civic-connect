@@ -44,14 +44,15 @@ export async function createDepartment(req: Request, res: Response): Promise<voi
 export async function getActiveCategories(_req: Request, res: Response): Promise<void> {
   try {
     const categories = await prisma.category.findMany({
-      where: { isActive: true, OR: [{ departmentId: null }, { department: { isActive: true } }] },
+      where: { isActive: true },
       select: {
         id: true, name: true, description: true,
-        department: { select: { id: true, name: true } }
+        department: { select: { id: true, name: true, isActive: true } }
       },
       orderBy: { name: "asc" }
     });
-    res.status(200).json(categories.map((category) => ({
+    const available = categories.filter((category) => !category.department || category.department.isActive);
+    res.status(200).json(available.map((category) => ({
       ...category,
       departmentName: category.department?.name ?? null
     })));
