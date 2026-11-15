@@ -19,7 +19,7 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    fullName: "", email: "", phone: "", county: "", password: "", confirmPassword: "",
+    fullName: "", email: "", phone: "", password: "", confirmPassword: "",
   });
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
@@ -46,7 +46,7 @@ export default function Register() {
     try {
       await register({
         fullName: form.fullName, email: form.email, phone: form.phone || undefined,
-        county: form.county || undefined, password: form.password,
+        password: form.password,
       });
       setSuccess(true);
       setTimeout(() => navigate("/login"), 1200);
@@ -100,12 +100,6 @@ setError(
           <div>
             <label className="text-sm font-medium">Phone number <span className="text-civic-ink/40">(optional)</span></label>
             <input value={form.phone} onChange={update("phone")}
-              className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">County / location <span className="text-civic-ink/40">(optional)</span></label>
-            <input value={form.county} onChange={update("county")}
               className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
           </div>
 
