@@ -6,14 +6,19 @@ import api from "../api/client";
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
+    setError("");
+    setMessage("");
     try {
       const { data } = await api.post("/auth/forgot-password", { email });
       setMessage(data.message);
+    } catch (err) {
+      setError(err.response?.data?.message || "Password reset is currently unavailable.");
     } finally {
       setSubmitting(false);
     }
@@ -28,6 +33,7 @@ export default function ForgotPassword() {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           {message && <div className="rounded-md bg-blue-50 px-4 py-3 text-sm text-civic-blue">{message}</div>}
+          {error && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
           <div>
             <label className="text-sm font-medium">Email</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
