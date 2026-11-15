@@ -48,3 +48,19 @@ export function authenticateToken(
     res.status(401).json({ message: "Invalid or expired authentication session." });
   }
 }
+
+export function requireRoles(
+  ...allowedRoles: NonNullable<AuthenticatedRequest["user"]>["role"][]
+) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ message: "Authentication required." });
+      return;
+    }
+    if (!allowedRoles.includes(req.user.role)) {
+      res.status(403).json({ message: "You do not have permission to perform this action." });
+      return;
+    }
+    next();
+  };
+}
