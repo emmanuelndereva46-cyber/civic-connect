@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Bell, Inbox, MessageSquareText } from "lucide-react";
+import { LayoutDashboard, Bell, Inbox } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import api from "../api/client";
@@ -151,17 +151,14 @@ function PigeonholePanel({ submission, onClose, onChanged }) {
 export default function OfficerDashboard() {
   const [tab, setTab] = useState("reports");
   const [reports, setReports] = useState([]);
-  const [pigeonhole, setPigeonhole] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
-  const [selectedPg, setSelectedPg] = useState(null);
   const [loading, setLoading] = useState(true);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [r, p] = await Promise.all([api.get("/reports"), api.get("/pigeonhole")]);
-      setReports(r.data);
-      setPigeonhole(p.data);
+      const { data } = await api.get("/reports");
+      setReports(data);
     } finally {
       setLoading(false);
     }
@@ -185,10 +182,6 @@ export default function OfficerDashboard() {
         <button onClick={() => setTab("reports")}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium ${tab === "reports" ? "border-b-2 border-civic-navy text-civic-navy" : "text-civic-ink/50"}`}>
           <Inbox size={16} /> Reports
-        </button>
-        <button onClick={() => setTab("pigeonhole")}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium ${tab === "pigeonhole" ? "border-b-2 border-civic-navy text-civic-navy" : "text-civic-ink/50"}`}>
-          <MessageSquareText size={16} /> Pigeonhole
         </button>
       </div>
 
@@ -220,32 +213,7 @@ export default function OfficerDashboard() {
         </div>
       )}
 
-      {tab === "pigeonhole" && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-civic-line bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-civic-bg text-xs uppercase text-civic-ink/50">
-              <tr>
-                <th className="px-4 py-2">Reference</th><th className="px-4 py-2">Type</th>
-                <th className="px-4 py-2">Subject</th><th className="px-4 py-2">Status</th><th className="px-4 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {!loading && pigeonhole.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-civic-ink/50">No Pigeonhole submissions for your department yet.</td></tr>}
-              {pigeonhole.map((p) => (
-                <tr key={p.id} className="border-t border-civic-line">
-                  <td className="px-4 py-2 font-medium">{p.referenceNumber}</td>
-                  <td className="px-4 py-2 capitalize">{p.submissionType.toLowerCase()}</td>
-                  <td className="px-4 py-2">{p.subject}</td>
-                  <td className="px-4 py-2"><StatusBadge status={p.status} /></td>
-                  <td className="px-4 py-2 text-right">
-                    <button onClick={() => setSelectedPg(p)} className="text-civic-blue hover:underline">Open</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+}
 
       {selectedReport && (
         <ReportPanel report={selectedReport} onClose={() => setSelectedReport(null)} onChanged={loadAll} />
