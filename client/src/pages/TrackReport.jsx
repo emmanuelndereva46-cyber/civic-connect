@@ -13,9 +13,7 @@ function ReportLookup() {
     e.preventDefault();
     setError(""); setResult(null); setLoading(true);
     try {
-const { data } = await api.get(
-  `/track/report/${encodeURIComponent(ref.trim())}`
-);
+const { data } = await api.post("/track/report", { referenceNumber: ref.trim() });
       setResult(data);
     } catch {
       setError("No report found with that reference number.");
@@ -79,7 +77,7 @@ function PigeonholeLookup() {
     e.preventDefault();
     setError(""); setResult(null); setLoading(true);
     try {
-      const { data } = await api.get("/track/pigeonhole", { params: { ref: ref.trim() } });
+      const { data } = await api.post("/track/pigeonhole", { ref: ref.trim() });
       setResult(data);
     } catch {
       setError("No matching submission — check your reference number.");
