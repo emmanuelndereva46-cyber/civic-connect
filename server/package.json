@@ -5,7 +5,7 @@
   "main": "dist/src/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "prisma generate --config prisma7.config.ts && tsc",
+    "build": "prisma generate --config prisma7.config.ts && node ./node_modules/typescript/bin/tsc",
     "start": "node dist/src/server.js",
     "typecheck": "tsc --noEmit",
     "test": "echo \"Tests not configured yet\""
