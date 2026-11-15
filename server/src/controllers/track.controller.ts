@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import rateLimit from "express-rate-limit";
 import { prisma } from "../config/prisma.js";
 
 export async function trackPigeonhole(req: Request, res: Response): Promise<void> {
