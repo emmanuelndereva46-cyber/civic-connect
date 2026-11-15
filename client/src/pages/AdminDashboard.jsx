@@ -107,7 +107,7 @@ function UsersTab() {
       setNewUser({ fullName: "", email: "", role: "OFFICER", departmentId: "" });
       load();
     } catch (err) {
-      setError(err.response?.data?.error || "Could not create the account.");
+      setError(err.response?.data?.message || err.response?.data?.error || "Could not create the account.");
     }
   }
 
