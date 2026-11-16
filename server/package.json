@@ -1,4 +1,3 @@
-
 {
   "name": "server",
   "version": "1.0.0",
@@ -6,16 +5,16 @@
   "main": "dist/src/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "node ./node_modules/prisma/build/index.js generate --config prisma7.config.ts && node ./node_modules/typescript/bin/tsc",
     "start": "node dist/src/server.js",
     "typecheck": "tsc --noEmit",
     "test": "echo \"Tests not configured yet\""
   },
   "keywords": [],
-  "type": "module",
+  "type": "commonjs",
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.10.0",
-    "@prisma/client": "^7.10.0",
+    "@prisma/client": "^7.10.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
@@ -30,9 +29,8 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.4",
-    "prisma": "^7.10.0",
+    "prisma": "^7.10.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   }
 }
-

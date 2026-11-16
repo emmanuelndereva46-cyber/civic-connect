@@ -13,7 +13,8 @@
     },
     "server": {
       "root": "server",
-      "framework": "flask"
+      "runtime": "container",
+      "entrypoint": "Dockerfile"
     }
   },
   "rewrites": [

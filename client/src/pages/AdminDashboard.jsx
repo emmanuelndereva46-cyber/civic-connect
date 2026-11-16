@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  LayoutDashboard, Bell, Users, Building2, ScrollText,
+  LayoutDashboard, Bell, Users, Building2, ScrollText, MessageSquareText,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -107,7 +107,7 @@ function UsersTab() {
       setNewUser({ fullName: "", email: "", role: "OFFICER", departmentId: "" });
       load();
     } catch (err) {
-      setError(err.response?.data?.error || "Could not create the account.");
+      setError(err.response?.data?.message || err.response?.data?.error || "Could not create the account.");
     }
   }
 
@@ -190,6 +190,25 @@ function DepartmentsTab() {
   const [categories, setCategories] = useState([]);
   const [newDept, setNewDept] = useState("");
   const [newCat, setNewCat] = useState({ name: "", departmentId: "" });
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+  const [routingError, setRoutingError] = useState("");
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState("");
+  const nairobiSectors = [
+    ["Boroughs Administration and Personnel", "County public service, borough and sub-county administration, and personnel coordination."],
+    ["Built Environment and Urban Planning Sector", "County lands administration, surveying, mapping, urban planning, development control, housing and urban renewal."],
+    ["Business and Hustler Opportunities", "Trade development, markets, business licensing, enterprise and cooperative development."],
+    ["Finance and Economic Planning Affairs", "County finance, revenue, budgeting, accounting, economic planning and resource management."],
+    ["Green Nairobi (Environment, Water, Food and Agriculture)", "Environment, solid waste, water and sanitation, food and agriculture, forestry and natural resources."],
+    ["Health Wellness and Nutrition", "County health facilities, public health, wellness, nutrition and related county health services."],
+    ["Inclusivity, Public Participation And Customer Service Sector", "Citizen engagement, public participation, inclusivity, public communication and customer service."],
+    ["Innovation and Digital Economy", "County ICT infrastructure, digital services, innovation, data and digital economy programmes."],
+    ["Mobility and Works", "County mobility, roads, transport, public works, parking, street lighting and drainage."],
+    ["Security and Compliance Sub Sector", "County inspectorate, investigations, information analysis and enforcement of county compliance."],
+    ["Talents, Skills Development and Care", "Early childhood development, vocational training, sports, culture, recreation and community care."]
+  ];
+
 
   async function load() {
     const [d, c] = await Promise.all([api.get("/departments"), api.get("/categories")]);
@@ -214,8 +233,23 @@ function DepartmentsTab() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div>
-        <h3 className="font-semibold text-civic-navy">Departments</h3>
-        <form onSubmit={addDept} className="mt-2 flex gap-2">
+        <h3 className="font-semibold text-civic-navy">Nairobi City County departments</h3>
+        <p className="mt-1 text-xs text-civic-ink/60">Official county sectors and sub-sectors. Add missing entries without duplicating existing departments.</p>
+        <button type="button" disabled={seeding} onClick={async () => {
+          setSeeding(true); setSeedMessage("");
+          let created = 0; let existing = 0; let failed = 0;
+          for (const [name, description] of nairobiSectors) {
+            try { await api.post("/departments", { name, description }); created++; }
+            catch (err) { if (err.response?.status === 409) existing++; else failed++; }
+          }
+          await load();
+          setSeedMessage(`Added ${created}; already present ${existing}; failed ${failed}. Review the list before assigning officers.`);
+          setSeeding(false);
+        }} className="mt-3 rounded-md border border-civic-line px-3 py-2 text-sm font-medium disabled:opacity-50">
+          {seeding ? "Adding county sectors…" : "Add Nairobi City County sectors"}
+        </button>
+        {seedMessage && <p className="mt-2 text-xs text-civic-ink/70">{seedMessage}</p>}
+        <form onSubmit={addDept} className="mt-3 flex gap-2">
           <input value={newDept} onChange={(e) => setNewDept(e.target.value)} placeholder="New department name"
             className="flex-1 rounded-md border border-civic-line px-3 py-2 text-sm" />
           <button className="rounded-md bg-civic-navy px-3 py-2 text-sm font-medium text-white">Add</button>
@@ -236,10 +270,33 @@ function DepartmentsTab() {
           </select>
           <button className="rounded-md bg-civic-navy px-3 py-2 text-sm font-medium text-white">Add</button>
         </form>
+        <div className="mt-4 rounded-lg border border-civic-line bg-white p-3">
+          <h4 className="text-sm font-semibold text-civic-navy">Route an existing category</h4>
+          <p className="mt-1 text-xs text-civic-ink/60">Assign existing unassigned categories to the responsible department.</p>
+          {routingError && <p className="mt-2 text-sm text-red-600">{routingError}</p>}
+          <form className="mt-3 flex flex-wrap gap-2" onSubmit={async (e) => {
+            e.preventDefault(); setRoutingError("");
+            if (!selectedCategoryId || !selectedDepartmentId) return setRoutingError("Select both a category and department.");
+            try {
+              await api.put(`/categories/${selectedCategoryId}/department`, { departmentId: Number(selectedDepartmentId) });
+              setSelectedCategoryId(""); setSelectedDepartmentId(""); await load();
+            } catch (err) { setRoutingError(err.response?.data?.message || "Could not assign this category."); }
+          }}>
+            <select required value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} className="min-w-40 flex-1 rounded-md border border-civic-line px-3 py-2 text-sm">
+              <option value="">Select category</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}{c.departmentName ? ` — ${c.departmentName}` : " — Unassigned"}</option>)}
+            </select>
+            <select required value={selectedDepartmentId} onChange={(e) => setSelectedDepartmentId(e.target.value)} className="min-w-40 flex-1 rounded-md border border-civic-line px-3 py-2 text-sm">
+              <option value="">Select department</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <button className="rounded-md bg-civic-navy px-3 py-2 text-sm font-medium text-white">Assign</button>
+          </form>
+        </div>
         <ul className="mt-3 divide-y divide-civic-line rounded-lg border border-civic-line bg-white text-sm">
           {categories.map((c) => (
             <li key={c.id} className="flex justify-between px-4 py-2">
-              <span>{c.name}</span><span className="text-civic-ink/50">{c.departmentName}</span>
+              <span>{c.name}</span><span className="text-civic-ink/50">{c.departmentName || "Unassigned"}</span>
             </li>
           ))}
         </ul>
@@ -273,10 +330,99 @@ function AuditTab() {
   );
 }
 
+
+function PigeonholeTab() {
+  const [items, setItems] = useState([]);
+  const [statuses, setStatuses] = useState({});
+  const [responses, setResponses] = useState({});
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState("");
+
+  async function load() {
+    setLoading(true); setError("");
+    try {
+      const { data } = await api.get("/pigeonhole");
+      setItems(data);
+      setStatuses(Object.fromEntries(data.map((item) => [item.id, item.status])));
+      setResponses(Object.fromEntries(data.map((item) => [item.id, item.response || ""])));
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not load Pigeonhole submissions.");
+    } finally { setLoading(false); }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function updateStatus(item) {
+    setBusy(`status-${item.id}`); setError("");
+    try {
+      await api.put(`/pigeonhole/${item.id}/status`, { status: statuses[item.id] });
+      await load();
+    } catch (err) { setError(err.response?.data?.message || "Could not update the submission status."); }
+    finally { setBusy(""); }
+  }
+
+  async function sendResponse(item) {
+    const response = (responses[item.id] || "").trim();
+    if (response.length < 2) return setError("A response must contain at least 2 characters.");
+    setBusy(`response-${item.id}`); setError("");
+    try {
+      await api.post(`/pigeonhole/${item.id}/response`, { response });
+      await load();
+    } catch (err) { setError(err.response?.data?.message || "Could not send the response."); }
+    finally { setBusy(""); }
+  }
+
+  const options = ["SUBMITTED", "RECEIVED", "UNDER_REVIEW", "ASSIGNED", "IN_PROGRESS", "RESPONSE_PROVIDED", "CLOSED"];
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-civic-ink/60">Administrator review queue. Anonymous submitters are never identified.</p>
+        <button onClick={load} className="rounded-md border border-civic-line px-3 py-2 text-sm">Refresh</button>
+      </div>
+      {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {loading && <p className="text-sm text-civic-ink/50">Loading submissions…</p>}
+      {!loading && items.length === 0 && <p className="rounded-lg border border-civic-line bg-white p-6 text-center text-sm text-civic-ink/50">No Pigeonhole submissions yet.</p>}
+      {items.map((item) => (
+        <article key={item.id} className="rounded-lg border border-civic-line bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-xs text-civic-ink/50">{item.referenceNumber} · {item.submissionType} · {item.anonymousSubmission ? "Anonymous" : "Identified"}</p>
+              <h3 className="mt-1 font-semibold text-civic-navy">{item.subject}</h3>
+            </div>
+            <span className="text-xs font-semibold">{item.status.replace(/_/g, " ")}</span>
+          </div>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-civic-ink/80">{item.message}</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+            <select value={statuses[item.id] || item.status} onChange={(e) => setStatuses((v) => ({ ...v, [item.id]: e.target.value }))}
+              className="rounded-md border border-civic-line px-3 py-2 text-sm">
+              {options.map((status) => <option key={status} value={status}>{status.replace(/_/g, " ")}</option>)}
+            </select>
+            <button disabled={busy === `status-${item.id}`} onClick={() => updateStatus(item)}
+              className="rounded-md border border-civic-line px-3 py-2 text-sm font-medium disabled:opacity-50">
+              {busy === `status-${item.id}` ? "Saving…" : "Update status"}
+            </button>
+          </div>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <textarea rows={2} value={responses[item.id] || ""} onChange={(e) => setResponses((v) => ({ ...v, [item.id]: e.target.value }))}
+              placeholder="Write an official response" className="min-w-0 flex-1 rounded-md border border-civic-line px-3 py-2 text-sm" />
+            <button disabled={busy === `response-${item.id}`} onClick={() => sendResponse(item)}
+              className="self-start rounded-md bg-civic-navy px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+              {busy === `response-${item.id}` ? "Sending…" : "Send response"}
+            </button>
+          </div>
+          {item.response && <p className="mt-3 rounded-md bg-civic-bg p-3 text-sm"><strong>Latest response:</strong> {item.response}</p>}
+        </article>
+      ))}
+    </div>
+  );
+}
+
 const TABS = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "users", label: "Users", icon: Users },
   { key: "departments", label: "Departments", icon: Building2 },
+  { key: "pigeonhole", label: "Pigeonhole", icon: MessageSquareText },
   { key: "audit", label: "Audit logs", icon: ScrollText },
 ];
 
@@ -296,6 +442,7 @@ export default function AdminDashboard() {
         {tab === "overview" && <OverviewTab />}
         {tab === "users" && <UsersTab />}
         {tab === "departments" && <DepartmentsTab />}
+        {tab === "pigeonhole" && <PigeonholeTab />}
         {tab === "audit" && <AuditTab />}
       </div>
     </DashboardLayout>

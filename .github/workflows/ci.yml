@@ -1,0 +1,49 @@
+name: CivicConnect CI
+
+on:
+  push:
+    branches:
+      - integration/civicconnect-typescript
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    name: Client production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  server:
+    name: Server Prisma generation and TypeScript build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    env:
+      DATABASE_URL: mysql://build:build@127.0.0.1:4000/civicconnect
+      TIDB_CA_CERT_PATH: certs/isrgrootx1.pem
+      JWT_SECRET: ci-only-placeholder-secret-do-not-use
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm run build

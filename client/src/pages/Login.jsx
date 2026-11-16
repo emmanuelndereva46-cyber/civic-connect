@@ -165,15 +165,6 @@ export default function Login() {
           </Link>
         </p>
 
-        <div className="mt-8 rounded-md border border-civic-line bg-white p-4 text-xs text-civic-ink/60">
-          <p className="font-medium text-civic-ink/80">
-            Demo accounts (password: Demo@12345)
-          </p>
-          <p className="mt-1">
-            admin@demo.civicconnect.test · officer@demo.civicconnect.test ·
-            citizen@demo.civicconnect.test
-          </p>
-        </div>
       </div>
     </div>
   );
