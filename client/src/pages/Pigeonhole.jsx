@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, ShieldAlert } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import api from "../api/client";
@@ -16,23 +16,14 @@ const TYPES = [
 
 export default function Pigeonhole() {
   const { user } = useAuth();
-  const [departments, setDepartments] = useState([]);
   const [form, setForm] = useState({
-    submissionType: "SUGGESTION", subject: "", message: "", departmentId: "",
+    submissionType: "SUGGESTION", subject: "", message: "",
   });
   const [anonymous, setAnonymous] = useState(!user);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
-
-  useEffect(() => {
-    api.get("/departments").then((r) => setDepartments(r.data)).catch(() => setDepartments([]));
-  }, []);
-
-  useEffect(() => {
-    if (!user) setAnonymous(true);
-  }, [user]);
 
   function update(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -49,7 +40,6 @@ export default function Pigeonhole() {
     try {
       const { data } = await api.post("/pigeonhole", {
         submissionType: form.submissionType, subject: form.subject.trim(), message: form.message.trim(),
-        departmentId: form.departmentId ? Number(form.departmentId) : null,
         anonymous, consent: true,
       });
       setResult(data);
@@ -81,16 +71,6 @@ setError(
             <p className="mt-2 text-sm text-civic-ink/60">Reference number</p>
             <p className="text-lg font-bold">{result.referenceNumber}</p>
 
-            {result.accessCode && (
-              <div className="mt-6 rounded-md bg-amber-50 p-4 text-left text-sm text-amber-900">
-                <p className="flex items-center gap-2 font-medium"><ShieldAlert size={16} /> Save this access code</p>
-                <p className="mt-1 font-mono text-base">{result.accessCode}</p>
-                <p className="mt-2 text-xs">
-                  Since this submission is anonymous, this code is the only way to check its status later.
-                  It will not be shown again — write it down along with your reference number.
-                </p>
-              </div>
-            )}
 
             <div className="mt-8 flex justify-center gap-3">
               <Link to="/track" className="rounded-md bg-civic-navy px-4 py-2 text-sm font-medium text-white">Check status</Link>
@@ -108,8 +88,7 @@ setError(
       <div className="mx-auto max-w-xl px-6 py-12">
         <h1 className="text-2xl font-bold text-civic-navy">The Pigeonhole</h1>
         <p className="mt-1 text-sm text-civic-ink/60">
-          A digital suggestion, complaint and feedback box — send a concern straight to the
-          relevant department, with or without your name attached.
+          A digital suggestion, complaint and feedback box — send a concern to the CivicConnect review queue, with or without your name attached.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
@@ -137,15 +116,6 @@ setError(
               placeholder="Share your suggestion, complaint, or feedback in detail" />
           </div>
 
-          <div>
-            <label className="text-sm font-medium">Department</label>
-            <select value={form.departmentId} onChange={update("departmentId")}
-              className="mt-1 w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue">
-              <option value="">Not sure — send to general review</option>
-              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          </div>
-
           <div className="rounded-md border border-civic-line p-4">
             <p className="text-sm font-medium">How should we handle your identity?</p>
             <div className="mt-2 space-y-2 text-sm">
@@ -162,7 +132,7 @@ setError(
               <p className="mt-2 text-xs text-civic-ink/50">
                 Your name and contact details will not be attached. Basic security metadata (such as
                 IP address) is still retained for audit purposes — this is not complete anonymity.
-                You'll receive a one-time access code to check for a response later.
+                Keep your reference number to check for a response later.
               </p>
             )}
           </div>

@@ -41,7 +41,7 @@ const { data } = await api.get(
             <StatusBadge status={result.status} />
           </div>
 <p className="mt-1 text-sm text-civic-ink/60">
-  Department: {result.department?.name ?? "Not assigned"}
+  Department: {result.department ?? "Not assigned"}
 </p>
           <ol className="mt-5 space-y-3 border-l border-civic-line pl-4 text-sm">
 {(result.updates ?? []).length === 0 && (
@@ -62,12 +62,6 @@ const { data } = await api.get(
     </p>
   </li>
 ))}
-            {result.updates.map((u, i) => (
-              <li key={i}>
-                <span className="font-medium capitalize">{(u.status || "").replace(/_/g, " ").toLowerCase()}</span>
-                {u.comment && <span className="text-civic-ink/60"> — {u.comment}</span>}
-              </li>
-            ))}
           </ol>
         </div>
       )}
@@ -77,7 +71,6 @@ const { data } = await api.get(
 
 function PigeonholeLookup() {
   const [ref, setRef] = useState("");
-  const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -86,7 +79,7 @@ function PigeonholeLookup() {
     e.preventDefault();
     setError(""); setResult(null); setLoading(true);
     try {
-      const { data } = await api.get("/track/pigeonhole", { params: { ref: ref.trim(), code: code.trim() } });
+      const { data } = await api.get("/track/pigeonhole", { params: { ref: ref.trim() } });
       setResult(data);
     } catch {
       setError("No matching anonymous submission — check your reference and access code.");
@@ -98,12 +91,10 @@ function PigeonholeLookup() {
   return (
     <div>
       <p className="mb-4 text-sm text-civic-ink/60">
-        For anonymous Pigeonhole submissions only. Non-anonymous submissions can be tracked from your dashboard after logging in.
+        Enter the reference number shown after submission. This public lookup shows only the current status and any public response.
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="PG-2026-000001"
-          className="w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
-        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Access code"
           className="w-full rounded-md border border-civic-line px-3 py-2 text-sm focus:border-civic-blue" />
         <button disabled={loading} className="w-full rounded-md bg-civic-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
           {loading ? "Checking…" : "Check status"}

@@ -1,45 +1,43 @@
 import re
+import secrets
 from datetime import datetime
 
 from extensions import db
 from models import AuditLog, Notification
 
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-# At least 8 chars, one uppercase letter, one digit.
+EMAIL_RE = re.compile(r"^[^@ ]+@[^@ ]+[.][^@ ]+$")
 STRONG_PASSWORD_RE = re.compile(r"^(?=.*[A-Z])(?=.*[0-9]).{8,}$")
 
 
 def is_valid_email(value: str) -> bool:
-    return bool(value) and bool(EMAIL_RE.match(value)) and len(value) <= 150
+    return bool(value) and bool(EMAIL_RE.match(value)) and len(value) <= 191
 
 
 def is_strong_password(value: str) -> bool:
     return bool(value) and bool(STRONG_PASSWORD_RE.match(value))
 
 
-def make_reference(prefix: str, record_id: int) -> str:
-    """e.g. CC-2026-000001 or PG-2026-000001"""
-    return f"{prefix}-{datetime.utcnow().year}-{record_id:06d}"
+def make_reference(prefix: str, record_id=None) -> str:
+    # Required unique reference is generated before the first database INSERT.
+    suffix = f"{record_id:06d}" if record_id is not None else secrets.token_hex(10).upper()
+    return f"{prefix}-{datetime.utcnow().year}-{suffix}"
 
 
 def client_ip(req) -> str | None:
-    # Trust the first hop only; behind a real reverse proxy this should read
-    # a configured trusted X-Forwarded-For instead.
     return req.remote_addr
 
 
 def log_action(req, user_id, action, entity_type, entity_id=None, description=None):
-    entry = AuditLog(
-        user_id=user_id, action=action, entity_type=entity_type,
-        entity_id=entity_id, description=description, ip_address=client_ip(req),
-    )
+    entry = AuditLog(user_id=user_id, action=action, entity_type=entity_type,
+                     entity_id=str(entity_id) if entity_id is not None else None,
+                     description=description, ip_address=client_ip(req))
     db.session.add(entry)
 
 
-def notify(user_id, title, message, type_, report_id=None, pigeonhole_id=None):
+def notify(user_id, title, message, type_=None, report_id=None, pigeonhole_id=None):
+    # The current TiDB notifications table only supports report_id, not
+    # pigeonhole_id or a notification type. Ignore those legacy API arguments.
     if not user_id:
         return
-    db.session.add(Notification(
-        user_id=user_id, title=title, message=message, type=type_,
-        report_id=report_id, pigeonhole_id=pigeonhole_id,
-    ))
+    db.session.add(Notification(user_id=user_id, title=title, message=message,
+                                report_id=report_id))

@@ -17,10 +17,10 @@ design and API shape are the same; only the backend language changed.
 
 - Registration, login, logout, session cookie, role-based access control
 - Citizen: multi-step report form, dashboard, report tracking, profile
-- Pigeonhole: suggestions/complaints/feedback, anonymous mode with a
-  one-time access code, department routing (or "not sure" → general queue)
+- Pigeonhole: suggestions/complaints/feedback, anonymous mode, and public
+  status/response lookup using a high-entropy reference number
 - Officer: dashboard with Reports and Pigeonhole tabs, status updates,
-  comments/responses, department-scoped access
+  comments/responses; report access is department-scoped
 - Admin: live stats and charts, user management (create/activate/deactivate),
   department & category (routing) management, audit log viewer
 - Notifications, public report/Pigeonhole tracking, audit logging throughout
@@ -43,12 +43,12 @@ design and API shape are the same; only the backend language changed.
   in a production deployment where the frontend and API share a domain. If
   you deploy them on different domains, switch to `SameSite=None; Secure`
   over HTTPS instead.
-- Officers never see the identity of anonymous Pigeonhole submissions; only
-  administrators can see the author of non-anonymous ones (change this in
-  `pigeonhole_routes.py` if your privacy policy calls for something else).
-  Anonymous submissions still retain the submitter's IP address in the audit
-  log — document this in your privacy policy rather than claiming complete
-  anonymity.
+- The current TiDB schema has no Pigeonhole department or assigned-officer
+  columns, so officers share the Pigeonhole review queue. Only administrators
+  can see the author of non-anonymous submissions.
+- Anonymous Pigeonhole submissions retain a reference number for public
+  status/response lookup; the schema has no separate access-code hash column.
+  IP address metadata is retained in the audit log, so this is not complete anonymity.
 
 ## Prerequisites
 
@@ -128,7 +128,7 @@ GET    /api/pigeonhole/:id
 PUT    /api/pigeonhole/:id/status       (officer/admin)
 POST   /api/pigeonhole/:id/response     (officer/admin)
 PUT    /api/pigeonhole/:id/assign       (admin)
-GET    /api/track/pigeonhole?ref=&code= (public, anonymous submissions)
+GET    /api/track/pigeonhole?ref= (public status/response only)
 
 GET    /api/departments
 POST   /api/departments                 (admin)
